@@ -1,0 +1,48 @@
+{
+	"schemaVersion": 1,
+	"id": "datapack-breakpoint",
+	"version": "${version}",
+	"name": "Datapack Breakpoint",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/datapack-breakpoint/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			{
+				"value": "top.mcfpp.mod.breakpoint.DatapackBreakpoint",
+				"adapter": "kotlin"
+			}
+		],
+		"client": [
+			{
+				"value": "top.mcfpp.mod.breakpoint.DatapackBreakpointClient",
+				"adapter": "kotlin"
+			}
+		]
+	},
+	"mixins": [
+		"datapack-breakpoint.mixins.json",
+		{
+			"config": "datapack-breakpoint.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.15.11",
+		"minecraft": "~1.21",
+		"java": ">=21",
+		"fabric-api": "*",
+		"fabric-language-kotlin": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
