@@ -16,16 +16,10 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			{
-				"value": "top.mcfpp.mod.breakpoint.DatapackBreakpoint",
-				"adapter": "kotlin"
-			}
+			"top.mcfpp.mod.breakpoint.DatapackBreakpoint"
 		],
 		"client": [
-			{
-				"value": "top.mcfpp.mod.breakpoint.DatapackBreakpointClient",
-				"adapter": "kotlin"
-			}
+			"top.mcfpp.mod.breakpoint.DatapackBreakpointClient"
 		]
 	},
 	"mixins": [

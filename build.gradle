@@ -1,7 +1,6 @@
 plugins {
 	id 'fabric-loom' version '1.7-SNAPSHOT'
 	id 'maven-publish'
-	id "org.jetbrains.kotlin.jvm" version "2.0.0"
 }
 
 version = project.mod_version
@@ -52,12 +51,6 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 21
-}
-
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
-	kotlinOptions {
-		jvmTarget = 21
-	}
 }
 
 java {
