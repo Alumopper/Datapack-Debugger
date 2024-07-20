@@ -1,13 +1,20 @@
 package top.mcfpp.mod.breakpoint.command;
 
 import com.google.common.collect.Queues;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
+import net.minecraft.command.argument.*;
+import com.mojang.brigadier.arguments.*;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandExecutionContext;
-import net.minecraft.server.command.CommandManager;
+import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.server.command.CommandManager.argument;
+
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtHelper;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import top.mcfpp.mod.breakpoint.DatapackBreakpoint;
 
 import java.util.Deque;
@@ -22,25 +29,46 @@ public class BreakPointCommand {
 
     public static void onInitialize() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(CommandManager.literal("breakpoint")
+            dispatcher.register(literal("breakpoint")
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(context -> {
                         context.getSource().sendFeedback(() -> Text.literal("已触发断点"), false);
                         breakPoint(context.getSource());
                         return 1;
                     })
-                    .then(CommandManager.literal("step")
+                    .then(literal("step")
                             .executes(context -> {
                                 step(1, context.getSource());
                                 return 1;
                             })
+                            .then(argument("lines", IntegerArgumentType.integer())
+                                    .executes(context -> {
+                                        final int lines = IntegerArgumentType.getInteger(context, "lines");
+                                        step(lines, context.getSource());
+                                        return 1;
+                                    })
+                            )
                     )
-                    .then(CommandManager.literal("move")
+                    .then(literal("move")
                             .executes(context -> {
                                 context.getSource().sendFeedback(() -> Text.literal("已恢复断点"), false);
                                 moveOn(context.getSource());
                                 return 1;
                             })
+                    )
+                    .then(literal("get")
+                            .then(argument("key", StringArgumentType.string())
+                                    .executes(context -> {
+                                        final String key = StringArgumentType.getString(context, "key");
+                                        NbtElement nbt = getNBT(key);
+                                        if(nbt == null){
+                                            context.getSource().sendError(Text.literal("无法在当前上下文获取" + key + "的值"));
+                                        }else {
+                                            context.getSource().sendFeedback(() -> Text.literal(key + "的值是：").append(NbtHelper.toPrettyPrintedText(nbt)), false);
+                                        }
+                                        return 1;
+                                    })
+                            )
                     )
             );
         });
@@ -83,7 +111,7 @@ public class BreakPointCommand {
                 try {
                     context.close();
                 } catch (Exception e) {
-                    LOGGER.error(e.getMessage());
+                    LOGGER.error(e.toString());
                 }
             }
         }
@@ -98,8 +126,25 @@ public class BreakPointCommand {
                 context.run();
                 context.close();
             } catch (Exception e) {
-                LOGGER.error(e.getMessage());
+                LOGGER.error(e.toString());
             }
         }
+    }
+
+    private static @Nullable NbtElement getNBT(String key){
+        var context = storedCommandExecutionContext.peekFirst();
+        if(context == null){
+            return null;
+        }
+        try{
+            var cls = context.getClass();
+            var method = cls.getDeclaredMethod("getKey", String.class);
+            method.setAccessible(true);
+            return (NbtElement) method.invoke(context, key);
+        }catch (Exception e){
+            LOGGER.error(e.toString());
+            return null;
+        }
+
     }
 }

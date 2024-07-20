@@ -4,8 +4,12 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "CommandExecutionContextMixin",
+    "CommandFunctionActionMixin",
     "CommandFunctionMixin",
-    "FixCommandActionMixin"
+    "ExpandedMacroMixin",
+    "FixCommandActionMixin",
+    "FrameMixin",
+    "MacroMixin"
   ],
   "injectors": {
     "defaultRequire": 1
