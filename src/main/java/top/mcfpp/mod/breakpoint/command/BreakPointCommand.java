@@ -1,18 +1,16 @@
 package top.mcfpp.mod.breakpoint.command;
 
 import com.google.common.collect.Queues;
-import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandExecutionContext;
-import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.server.command.CommandManager.RegistrationEnvironment;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
-import org.spongepowered.asm.launch.MixinBootstrap;
+import org.jetbrains.annotations.NotNull;
 import top.mcfpp.mod.breakpoint.DatapackBreakpoint;
+
 import java.util.Deque;
-import java.util.Locale;
 
 public class BreakPointCommand {
 
@@ -25,31 +23,30 @@ public class BreakPointCommand {
     public static void onInitialize() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(CommandManager.literal("breakpoint")
-                .requires(source -> source.hasPermissionLevel(2))
-            .executes(context -> {
-            context.getSource().sendFeedback(() -> Text.literal("已触发断点"), false);
-            breakPoint(context.getSource());
-            return 1;
-        })
-            .then(CommandManager.literal("step")
-                .executes(context -> {
-                    context.getSource().sendFeedback(() -> Text.literal("已触发单步"), false);
-                    step(1, context.getSource());
-                    return 1;
-                })
-            )
-            .then(CommandManager.literal("move")
-            .executes(context -> {
-            context.getSource().sendFeedback(() -> Text.literal("已恢复断点"), false);
-            moveOn(context.getSource());
-            return 1;
-        })
-            )
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .executes(context -> {
+                        context.getSource().sendFeedback(() -> Text.literal("已触发断点"), false);
+                        breakPoint(context.getSource());
+                        return 1;
+                    })
+                    .then(CommandManager.literal("step")
+                            .executes(context -> {
+                                step(1, context.getSource());
+                                return 1;
+                            })
+                    )
+                    .then(CommandManager.literal("move")
+                            .executes(context -> {
+                                context.getSource().sendFeedback(() -> Text.literal("已恢复断点"), false);
+                                moveOn(context.getSource());
+                                return 1;
+                            })
+                    )
             );
         });
     }
 
-    private static void breakPoint(ServerCommandSource source) {
+    private static void breakPoint(@NotNull ServerCommandSource source) {
         source.getServer().getTickManager().setFrozen(true);
         isDebugging = true;
     }
@@ -66,7 +63,6 @@ public class BreakPointCommand {
             while (moveSteps > 0) {
                 context = storedCommandExecutionContext.peekFirst();
                 if (context != null) {
-                    LOGGER.info("before mod invokes run()");
                     var cls = context.getClass();
                     var method = cls.getDeclaredMethod("onStep");
                     method.setAccessible(true);
@@ -93,7 +89,7 @@ public class BreakPointCommand {
         }
     }
 
-    private static void moveOn(ServerCommandSource source) {
+    private static void moveOn(@NotNull ServerCommandSource source) {
         source.getServer().getTickManager().setFrozen(false);
         isDebugging = false;
         moveSteps = 0;

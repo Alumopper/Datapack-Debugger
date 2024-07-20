@@ -1,15 +1,14 @@
 {
 	"schemaVersion": 1,
 	"id": "datapack-breakpoint",
-	"version": "${version}",
+	"version": "0.1.0",
 	"name": "Datapack Breakpoint",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "A mod implements breakpoint functionality to datapack development.",
 	"authors": [
-		"Me!"
+		"Alumopper"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"sources": "https://github.com/Alumopper/datapack-breakpoint-template-1.21"
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/datapack-breakpoint/icon.png",
@@ -38,5 +37,6 @@
 	},
 	"suggests": {
 		"another-mod": "*"
-	}
+	},
+	"accessWidener": "datapack-breakpoint.accesswidener"
 }

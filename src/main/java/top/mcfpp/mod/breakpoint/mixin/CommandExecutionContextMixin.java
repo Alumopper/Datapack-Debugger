@@ -13,13 +13,10 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import top.mcfpp.mod.breakpoint.DatapackBreakpoint;
-import top.mcfpp.mod.breakpoint.command.BreakPointCommand;
 
 import java.lang.reflect.Field;
 import java.util.Deque;
 import java.util.List;
-import java.util.Objects;
 
 import static top.mcfpp.mod.breakpoint.command.BreakPointCommand.*;
 
@@ -63,8 +60,6 @@ abstract public class CommandExecutionContextMixin<T> {
                 ci.cancel();
                 return;
             }
-
-            LOGGER.info("Method run()V is injected!");
 
             if(isDebugging && commandQueueEntry.frame().depth() != 0 && moveSteps == 0) {
                 //在函数中执行的，把命令暂存
@@ -110,8 +105,6 @@ abstract public class CommandExecutionContextMixin<T> {
             if (commandQueueEntry == null) {
                 return;
             }
-
-            LOGGER.info("Method run()V is injected!");
 
             if(isDebugging && commandQueueEntry.frame().depth() != 0 && moveSteps == 0) {
                 //在函数中执行的，把所有命令暂存

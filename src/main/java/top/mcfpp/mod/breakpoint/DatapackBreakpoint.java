@@ -10,6 +10,9 @@ public class DatapackBreakpoint implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+
+		
+
 		BreakPointCommand.onInitialize();
 	}
 
