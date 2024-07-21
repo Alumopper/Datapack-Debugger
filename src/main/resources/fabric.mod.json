@@ -1,30 +1,30 @@
 {
 	"schemaVersion": 1,
-	"id": "datapack-breakpoint",
-	"version": "0.1.0",
-	"name": "Datapack Breakpoint",
+	"id": "datapack-debugger",
+	"version": "1.0.1",
+	"name": "Datapack Debugger",
 	"description": "A mod implements breakpoint functionality to datapack development.",
 	"authors": [
 		"Alumopper"
 	],
 	"contact": {
-		"sources": "https://github.com/Alumopper/datapack-breakpoint-template-1.21"
+		"sources": "https://github.com/Alumopper/Datapack-Debugger"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/datapack-breakpoint/icon.png",
+	"icon": "assets/datapack-debugger/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"top.mcfpp.mod.breakpoint.DatapackBreakpoint"
+			"top.mcfpp.mod.debugger.DatapackDebugger"
 		],
 		"client": [
-			"top.mcfpp.mod.breakpoint.DatapackBreakpointClient"
+			"top.mcfpp.mod.debugger.DatapackBreakpointClient"
 		]
 	},
 	"mixins": [
-		"datapack-breakpoint.mixins.json",
+		"datapack-debugger.mixins.json",
 		{
-			"config": "datapack-breakpoint.client.mixins.json",
+			"config": "datapack-debugger.client.mixins.json",
 			"environment": "client"
 		}
 	],
@@ -32,11 +32,8 @@
 		"fabricloader": ">=0.15.11",
 		"minecraft": "~1.21",
 		"java": ">=21",
-		"fabric-api": "*",
-		"fabric-language-kotlin": "*"
+		"fabric-api": "*"
 	},
-	"suggests": {
-		"another-mod": "*"
-	},
-	"accessWidener": "datapack-breakpoint.accesswidener"
+	"suggests": {},
+	"accessWidener": "datapack-debugger.accesswidener"
 }

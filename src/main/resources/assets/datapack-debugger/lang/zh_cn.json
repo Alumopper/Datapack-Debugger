@@ -1,0 +1,9 @@
+{
+  "commands.breakpoint.set": "已触发断点",
+  "commands.breakpoint.get": "参数 %s 的值是 %s",
+  "commands.breakpoint.get.fail": "无法获取参数 %s 的值",
+  "commands.breakpoint.move": "已恢复断点",
+  "commands.breakpoint.step.fail": "只能在断点调试状态下使用`step`命令",
+  "commands.breakpoint.step.over": "当前刻执行完毕，已退出断点",
+  "commands.breakpoint.run": "已执行：%s"
+}

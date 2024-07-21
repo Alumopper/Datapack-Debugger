@@ -1,4 +1,4 @@
-package top.mcfpp.mod.breakpoint.mixin.client;
+package top.mcfpp.mod.debugger.mixin.client;
 
 import net.minecraft.client.MinecraftClient;
 import org.spongepowered.asm.mixin.Mixin;

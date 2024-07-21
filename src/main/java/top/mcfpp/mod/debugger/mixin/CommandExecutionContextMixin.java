@@ -1,7 +1,6 @@
-package top.mcfpp.mod.breakpoint.mixin;
+package top.mcfpp.mod.debugger.mixin;
 
 import com.google.common.collect.Queues;
-import com.mojang.brigadier.context.ContextChain;
 import net.minecraft.command.*;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -24,7 +23,7 @@ import java.lang.reflect.Field;
 import java.util.Deque;
 import java.util.List;
 
-import static top.mcfpp.mod.breakpoint.command.BreakPointCommand.*;
+import static top.mcfpp.mod.debugger.command.BreakPointCommand.*;
 
 @Mixin(CommandExecutionContext.class)
 abstract public class CommandExecutionContextMixin<T> {

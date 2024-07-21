@@ -22,7 +22,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"datapack-breakpoint" {
+		"datapack-debugger" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
@@ -38,7 +38,6 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
 }
 
 processResources {
@@ -88,5 +87,5 @@ publishing {
 }
 
 loom {
-	accessWidenerPath = file("src/main/resources/datapack-breakpoint.accesswidener")
+	accessWidenerPath = file("src/main/resources/datapack-debugger.accesswidener")
 }

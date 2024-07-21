@@ -1,4 +1,4 @@
-package top.mcfpp.mod.breakpoint;
+package top.mcfpp.mod.debugger;
 
 import net.fabricmc.api.ClientModInitializer;
 

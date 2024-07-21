@@ -1,4 +1,4 @@
-package top.mcfpp.mod.breakpoint.mixin;
+package top.mcfpp.mod.debugger.mixin;
 
 import net.minecraft.command.Frame;
 import net.minecraft.server.function.Procedure;

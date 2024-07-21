@@ -1,8 +1,9 @@
 {
   "required": true,
-  "package": "top.mcfpp.mod.breakpoint.mixin",
+  "package": "top.mcfpp.mod.debugger.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "CommandExecutionContextMixin",
     "CommandExecutionContextMixin",
     "CommandFunctionActionMixin",
     "CommandFunctionMixin",

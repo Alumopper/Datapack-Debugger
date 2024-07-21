@@ -1,12 +1,12 @@
-package top.mcfpp.mod.breakpoint;
+package top.mcfpp.mod.debugger;
 
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import top.mcfpp.mod.breakpoint.command.BreakPointCommand;
+import top.mcfpp.mod.debugger.command.BreakPointCommand;
 
-public class DatapackBreakpoint implements ModInitializer {
-	private static final Logger logger = LoggerFactory.getLogger("datapack-breakpoint");
+public class DatapackDebugger implements ModInitializer {
+	private static final Logger logger = LoggerFactory.getLogger("datapack-debugger");
 
 	@Override
 	public void onInitialize() {

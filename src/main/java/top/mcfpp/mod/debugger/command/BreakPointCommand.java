@@ -1,23 +1,25 @@
-package top.mcfpp.mod.breakpoint.command;
+package top.mcfpp.mod.debugger.command;
 
 import com.google.common.collect.Queues;
-import net.minecraft.command.argument.*;
 import com.mojang.brigadier.arguments.*;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandExecutionContext;
 import static net.minecraft.server.command.CommandManager.literal;
 import static net.minecraft.server.command.CommandManager.argument;
 
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.text.TextColor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import top.mcfpp.mod.breakpoint.DatapackBreakpoint;
+import top.mcfpp.mod.debugger.DatapackDebugger;
 
 import java.util.Deque;
+import java.util.Objects;
 
 public class BreakPointCommand {
 
@@ -25,14 +27,14 @@ public class BreakPointCommand {
     public static boolean isDebugging = false;
     public static int moveSteps = 0;
     public static final Deque<CommandExecutionContext<?>> storedCommandExecutionContext = Queues.newArrayDeque();
-    private static final org.slf4j.Logger LOGGER = DatapackBreakpoint.getLogger();
+    private static final org.slf4j.Logger LOGGER = DatapackDebugger.getLogger();
 
     public static void onInitialize() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(literal("breakpoint")
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(context -> {
-                        context.getSource().sendFeedback(() -> Text.literal("已触发断点"), false);
+                        context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.set"), false);
                         breakPoint(context.getSource());
                         return 1;
                     })
@@ -51,7 +53,7 @@ public class BreakPointCommand {
                     )
                     .then(literal("move")
                             .executes(context -> {
-                                context.getSource().sendFeedback(() -> Text.literal("已恢复断点"), false);
+                                context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.move"), false);
                                 moveOn(context.getSource());
                                 return 1;
                             })
@@ -62,13 +64,37 @@ public class BreakPointCommand {
                                         final String key = StringArgumentType.getString(context, "key");
                                         NbtElement nbt = getNBT(key);
                                         if(nbt == null){
-                                            context.getSource().sendError(Text.literal("无法在当前上下文获取" + key + "的值"));
+                                            context.getSource().sendError(Text.translatable("commands.breakpoint.get.fail", key));
                                         }else {
-                                            context.getSource().sendFeedback(() -> Text.literal(key + "的值是：").append(NbtHelper.toPrettyPrintedText(nbt)), false);
+                                            context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.get", key, NbtHelper.toPrettyPrintedText(nbt)), false);
                                         }
                                         return 1;
                                     })
                             )
+                    )
+                    .then(literal("stack")
+                            .executes(context -> {
+                                MutableText text = Text.empty();
+                                var stacks = FunctionStackManager.getStack();
+                                for (String stack : stacks) {
+                                    var t = Text.literal(stack);
+                                    var style = t.getStyle();
+                                    if(stacks.indexOf(stack) == 0){
+                                        style = style.withBold(true);
+                                    }else {
+                                        style = style.withBold(false);
+                                    }
+                                    t.setStyle(style);
+                                    text = text.append(t);
+                                    text.append("\n");
+                                }
+                                final MutableText finalText = text;
+                                context.getSource().sendFeedback(() -> finalText, false);
+                                return 1;
+                            })
+                    )
+                    .then(literal("run")
+                            .redirect(dispatcher.getRoot(), context -> (ServerCommandSource) FunctionStackManager.source.peek())
                     )
             );
         });
@@ -81,7 +107,7 @@ public class BreakPointCommand {
 
     private static void step(int steps, ServerCommandSource source) {
         if (!isDebugging) {
-            source.sendError(Text.literal("只能在断点模式下使用step指令"));
+            source.sendError(Text.translatable("commands.breakpoint.step.fail"));
             return;
         }
         isDebugCommand = true;
@@ -99,7 +125,7 @@ public class BreakPointCommand {
                         storedCommandExecutionContext.pollFirst().close();
                     }
                 } else {
-                    source.sendFeedback(() -> Text.literal("当前刻已执行完毕，退出调试模式"), false);
+                    source.sendFeedback(() -> Text.translatable("commands.breakpoint.step.over"), false);
                     moveOn(source);
                 }
             }
@@ -145,6 +171,5 @@ public class BreakPointCommand {
             LOGGER.error(e.toString());
             return null;
         }
-
     }
 }

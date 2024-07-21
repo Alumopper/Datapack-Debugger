@@ -1,4 +1,4 @@
-package top.mcfpp.mod.breakpoint.mixin;
+package top.mcfpp.mod.debugger.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
