@@ -54,3 +54,34 @@ say end
 
 After executing `function test:test_macro {"msg":"test"}`, we passed the value `test` to the macro argument `msg` and 
 then the game will pause before `$say $(msg)`. At this time, you can use `/breakpoint get msg` to get the value `test`.
+
+* Get Function Stack
+
+By using `/breakpoint stack`, you can get the function stack of the current game. For example, if we have following two
+functions:
+
+```mcfunction
+#test:test1
+
+say 1
+function test:test2
+say 2
+
+#test: test2
+say A
+#breakpoint
+say B
+```
+
+When the game pauses at the breakpoint, you can use `/breakpoint stack` and the function stack will be printed in the
+chat screen:
+
+```
+test:test2
+test:test
+
+```
+
+* Run command in current context
+
+By using `/breakpoint run <command>`, you can run any command in the current context, just like `execute ... run ...`.

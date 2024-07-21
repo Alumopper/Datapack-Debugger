@@ -50,3 +50,34 @@ say end
 
 在执行`function test:test_macro {"msg":"test"}`后，我们将值`test`传递给了宏参数`msg`。同时，在执行函数的过程中，游戏会在`$say $(msg)`
 之前触发断点暂停。这个时候，就可以使用`/breakpoint get msg`来获取到值`test`。
+
+
+* 获取函数栈
+* Get Function Stack
+
+使用`/breakpoint stack`可以获取到当前游戏的函数栈。例如，如果我们有以下两个函数：
+
+```mcfunction
+#test:test1
+
+say 1
+function test:test2
+say 2
+
+#test: test2
+say A
+#breakpoint
+say B
+```
+
+当游戏暂停在断点位置的时候，在聊天栏执行`/breakpoint stack`即可将函数调用栈打印在聊天栏中。
+
+```
+test:test2
+test:test
+
+```
+
+* 在当前上下文中运行命令
+
+通过`/breakpoint run <command>`，你可以在当前上下文中运行任何命令，就像`execute ... run ...`一样。
