@@ -5,9 +5,11 @@ import net.minecraft.command.*;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.server.command.AbstractServerCommandSource;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.ExpandedMacro;
 import net.minecraft.server.function.Procedure;
 import net.minecraft.server.function.Tracer;
+import net.minecraft.util.Pair;
 import net.minecraft.util.profiler.Profiler;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -111,7 +113,7 @@ abstract public class CommandExecutionContextMixin<T> {
     }
 
     @Unique
-    private NbtElement getKey(String key){
+    private Pair<NbtElement, Boolean> getKey(String key){
         CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
 
         if (commandQueueEntry == null) {
@@ -126,7 +128,36 @@ abstract public class CommandExecutionContextMixin<T> {
             Field field1 = function.getClass().getDeclaredField("arguments");
             field1.setAccessible(true);
             var args = (NbtCompound)field1.get(function);
-            return args.get(key);
+            if(args == null){
+                return new Pair<>(null, false);
+            }
+            return new Pair<>(args.get(key), true);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Unique
+    private List<String> getKeys(){
+        CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
+
+        if (commandQueueEntry == null) {
+            return null;
+        }
+
+        var frame = commandQueueEntry.frame();
+        try {
+            Field field = frame.getClass().getDeclaredField("function");
+            field.setAccessible(true);
+            var function = (ExpandedMacro<T>) field.get(frame);
+            Field field1 = function.getClass().getDeclaredField("arguments");
+            field1.setAccessible(true);
+            var args = (NbtCompound)field1.get(function);
+            if(args != null){
+                return args.getKeys().stream().toList();
+            }else {
+                return null;
+            }
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -191,6 +222,11 @@ abstract public class CommandExecutionContextMixin<T> {
             e.printStackTrace();
         }
         return false;
+    }
+
+    @Unique
+    private boolean ifContainsCommandAction(){
+        return this.commandQueue.peekFirst() != null;
     }
 
 }

@@ -13,17 +13,10 @@ public class FunctionStackManager {
 
     static Stack<String> functionStack = new Stack<>();
 
-    public static void push(String function){
-        functionStack.push(function);
-    }
-
     public static String pop(){
-        if(functionStack.isEmpty()){
-            return null;
-        }else {
-            if(!source.isEmpty()) source.pop();
-            return functionStack.pop();
-        }
+        if(!source.isEmpty()) source.pop();
+        if(!functionStack.isEmpty()) return functionStack.pop();
+        return null;
     }
 
     public static List<String> getStack(){

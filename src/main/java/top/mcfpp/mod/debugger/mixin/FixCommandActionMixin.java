@@ -26,7 +26,7 @@ public class FixCommandActionMixin<T extends AbstractServerCommandSource<T>> {
 
     @Inject(method = "execute(Lnet/minecraft/server/command/AbstractServerCommandSource;Lnet/minecraft/command/CommandExecutionContext;Lnet/minecraft/command/Frame;)V", at = @At("HEAD"))
     private void execute(T abstractServerCommandSource, CommandExecutionContext<T> commandExecutionContext, Frame frame, CallbackInfo ci) {
-        FunctionStackManager.source.push(abstractServerCommandSource);
+        if(frame.depth() == 0) return;
         if(BreakPointCommand.isDebugging){
             if(BreakPointCommand.moveSteps > 0) BreakPointCommand.moveSteps --;
             if(this.command.startsWith("breakpoint")) return;

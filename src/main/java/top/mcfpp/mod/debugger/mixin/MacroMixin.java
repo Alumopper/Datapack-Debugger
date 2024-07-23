@@ -33,7 +33,7 @@ public class MacroMixin<T extends AbstractServerCommandSource<T>> {
     @Inject(method = "withMacroReplaced(Ljava/util/List;Ljava/util/List;Lcom/mojang/brigadier/CommandDispatcher;)Lnet/minecraft/server/function/Procedure;", at = @At("TAIL"))
     private void BeforeWithMacroReplacedReturn(List<String> varNames, List<String> arguments, CommandDispatcher<T> dispatcher, CallbackInfoReturnable<Procedure<T>> cir, @Local(ordinal = 2) List<SourcedCommandAction<T>> list){
 
-        final var THIS = (ExpandedMacro<T>) (Object) this;
+        final var THIS = (Macro<T>) (Object) this;
 
         list.addFirst(new FunctionInAction<>(THIS));
         list.add(new FunctionOutAction<>(THIS));

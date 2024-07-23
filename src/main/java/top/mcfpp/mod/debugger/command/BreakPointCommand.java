@@ -14,6 +14,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
+import net.minecraft.util.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import top.mcfpp.mod.debugger.DatapackDebugger;
@@ -60,13 +61,16 @@ public class BreakPointCommand {
                     )
                     .then(literal("get")
                             .then(argument("key", StringArgumentType.string())
+                                    .suggests(BreakpointSuggestionProvider.INSTANCE)
                                     .executes(context -> {
                                         final String key = StringArgumentType.getString(context, "key");
-                                        NbtElement nbt = getNBT(key);
-                                        if(nbt == null){
-                                            context.getSource().sendError(Text.translatable("commands.breakpoint.get.fail", key));
-                                        }else {
-                                            context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.get", key, NbtHelper.toPrettyPrintedText(nbt)), false);
+                                        var nbt = getNBT(key, context.getSource());
+                                        if(nbt != null){
+                                            if(nbt.getRight()){
+                                                context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.get", key, NbtHelper.toPrettyPrintedText(nbt.getLeft())), false);
+                                            }else {
+                                                context.getSource().sendError(Text.translatable("commands.breakpoint.get.fail.not_macro"));
+                                            }
                                         }
                                         return 1;
                                     })
@@ -96,6 +100,13 @@ public class BreakPointCommand {
                     .then(literal("run")
                             .redirect(dispatcher.getRoot(), context -> (ServerCommandSource) FunctionStackManager.source.peek())
                     )
+                    .then(literal("clear")
+                            .executes(context -> {
+                                FunctionStackManager.functionStack.clear();
+                                FunctionStackManager.source.clear();
+                                return 1;
+                            })
+                    )
             );
         });
     }
@@ -123,6 +134,14 @@ public class BreakPointCommand {
                     method.invoke(context);
                     if (moveSteps != 0) {
                         storedCommandExecutionContext.pollFirst().close();
+                    }else {
+                        var method1 = cls.getDeclaredMethod("ifContainsCommandAction");
+                        method1.setAccessible(true);
+                        boolean result =  (boolean) method1.invoke(context);
+                        if(!result){
+                            storedCommandExecutionContext.pollFirst().close();
+                        }
+                        break;
                     }
                 } else {
                     source.sendFeedback(() -> Text.translatable("commands.breakpoint.step.over"), false);
@@ -144,6 +163,10 @@ public class BreakPointCommand {
     }
 
     private static void moveOn(@NotNull ServerCommandSource source) {
+        if(!isDebugging){
+            source.sendError(Text.translatable("commands.breakpoint.move.not_debugging"));
+            return;
+        }
         source.getServer().getTickManager().setFrozen(false);
         isDebugging = false;
         moveSteps = 0;
@@ -157,18 +180,19 @@ public class BreakPointCommand {
         }
     }
 
-    private static @Nullable NbtElement getNBT(String key){
+    private static @Nullable Pair<NbtElement, Boolean> getNBT(String key, ServerCommandSource source){
         var context = storedCommandExecutionContext.peekFirst();
         if(context == null){
             return null;
         }
-        try{
+        try {
             var cls = context.getClass();
             var method = cls.getDeclaredMethod("getKey", String.class);
             method.setAccessible(true);
-            return (NbtElement) method.invoke(context, key);
+            return (Pair<NbtElement, Boolean>) method.invoke(context, key);
         }catch (Exception e){
             LOGGER.error(e.toString());
+            source.sendError(Text.translatable("commands.breakpoint.get.fail.error", key, e.toString()));
             return null;
         }
     }
