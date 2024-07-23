@@ -138,6 +138,27 @@ abstract public class CommandExecutionContextMixin<T> {
     }
 
     @Unique
+    private NbtElement getAllNBT(){
+        CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
+
+        if (commandQueueEntry == null) {
+            return null;
+        }
+
+        var frame = commandQueueEntry.frame();
+        try {
+            Field field = frame.getClass().getDeclaredField("function");
+            field.setAccessible(true);
+            var function = (ExpandedMacro<T>) field.get(frame);
+            Field field1 = function.getClass().getDeclaredField("arguments");
+            field1.setAccessible(true);
+            return (NbtCompound)field1.get(function);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Unique
     private List<String> getKeys(){
         CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
 

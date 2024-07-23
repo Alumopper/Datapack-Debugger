@@ -2,7 +2,7 @@
   "commands.breakpoint.set": "Breakpoint has triggered",
   "commands.breakpoint.get": "Argument %s has the following value: %s",
   "commands.breakpoint.get.fail": "Failed to get the value of argument %s",
-  "commands.breakpoint.get.fail.error": "Unexpected error while getting the value of argument %s: %s",
+  "commands.breakpoint.get.fail.error": "Unexpected error while getting the value of argument: %s",
   "commands.breakpoint.get.fail.not_macro": "Current function is not a macro",
   "commands.breakpoint.move": "The game is now moving on",
   "commands.breakpoint.move.not_debugging": "Can only use `move` command in breakpoint mode",

@@ -75,6 +75,15 @@ public class BreakPointCommand {
                                         return 1;
                                     })
                             )
+                            .executes(context -> {
+                                final var args = getAllNBT(context.getSource());
+                                if(args == null){
+                                    context.getSource().sendError(Text.translatable("commands.breakpoint.get.fail.not_macro"));
+                                }else {
+                                    context.getSource().sendFeedback(() -> (NbtHelper.toPrettyPrintedText(args)), false);
+                                }
+                                return 1;
+                            })
                     )
                     .then(literal("stack")
                             .executes(context -> {
@@ -192,7 +201,24 @@ public class BreakPointCommand {
             return (Pair<NbtElement, Boolean>) method.invoke(context, key);
         }catch (Exception e){
             LOGGER.error(e.toString());
-            source.sendError(Text.translatable("commands.breakpoint.get.fail.error", key, e.toString()));
+            source.sendError(Text.translatable("commands.breakpoint.get.fail.error", e.toString()));
+            return null;
+        }
+    }
+
+    private static @Nullable NbtElement getAllNBT(ServerCommandSource source){
+        var context = storedCommandExecutionContext.peekFirst();
+        if(context == null){
+            return null;
+        }
+        try {
+            var cls = context.getClass();
+            var method = cls.getDeclaredMethod("getAllNBT");
+            method.setAccessible(true);
+            return (NbtElement) method.invoke(context);
+        }catch (Exception e){
+            LOGGER.error(e.toString());
+            source.sendError(Text.translatable("commands.breakpoint.get.fail.error", e.toString()));
             return null;
         }
     }
