@@ -35,7 +35,13 @@ public class BreakPointCommand {
             dispatcher.register(literal("breakpoint")
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(context -> {
-                        context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.set"), false);
+                        var server = context.getSource().getServer();
+                        if(server != null){
+                            var players = server.getPlayerManager().getPlayerList();
+                            for (var player : players){
+                                player.sendMessage(Text.translatable("commands.breakpoint.set"));
+                            }
+                        }
                         breakPoint(context.getSource());
                         return 1;
                     })

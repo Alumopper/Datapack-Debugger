@@ -28,13 +28,17 @@ public class ExpandedMacroMixin<T extends AbstractServerCommandSource<T>> {
 
     @Shadow @Final private List<SourcedCommandAction<T>> entries;
 
-    @Inject(method = "withMacroReplaced", at = @At("HEAD"))
-    private void OnWithMacroReplaced(@Nullable NbtCompound arguments, CommandDispatcher<T> dispatcher, CallbackInfoReturnable<Procedure<T>> cir){;
+    @Inject(method = "withMacroReplaced", at = @At("HEAD"), cancellable = true)
+    private void OnWithMacroReplaced(@Nullable NbtCompound arguments, CommandDispatcher<T> dispatcher, CallbackInfoReturnable<Procedure<T>> cir){
 
         final var THIS = (ExpandedMacro<T>) (Object) this;
 
-        entries.addFirst(new FunctionInAction<>(THIS));
-        entries.add(new FunctionOutAction<>(THIS));
+        var newFunction = new ExpandedMacro<>(THIS.id(), new ArrayList<>(THIS.entries()));
+
+        newFunction.entries().addFirst(new FunctionInAction<>(THIS));
+        newFunction.entries().add(new FunctionOutAction<>(THIS));
+
+        cir.setReturnValue(newFunction);
 
     }
 
