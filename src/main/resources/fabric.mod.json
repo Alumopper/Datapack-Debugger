@@ -18,15 +18,10 @@
 			"top.mcfpp.mod.debugger.DatapackDebugger"
 		],
 		"client": [
-			"top.mcfpp.mod.debugger.DatapackBreakpointClient"
 		]
 	},
 	"mixins": [
-		"datapack-debugger.mixins.json",
-		{
-			"config": "datapack-debugger.client.mixins.json",
-			"environment": "client"
-		}
+		"datapack-debugger.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.15.11",
