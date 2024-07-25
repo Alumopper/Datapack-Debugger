@@ -4,10 +4,8 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import net.minecraft.nbt.NbtElement;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Pair;
+import top.mcfpp.mod.debugger.utils.Debugger;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -20,7 +18,7 @@ public class BreakpointSuggestionProvider implements SuggestionProvider<ServerCo
 
     @Override
     public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> c, SuggestionsBuilder builder) {
-        var context = BreakPointCommand.storedCommandExecutionContext.peekFirst();
+        var context = Debugger.storedCommandExecutionContext.peekFirst();
         if(context == null){
             return builder.buildFuture();
         }

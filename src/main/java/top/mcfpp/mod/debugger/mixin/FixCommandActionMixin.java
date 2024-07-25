@@ -14,9 +14,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import top.mcfpp.mod.debugger.command.BreakPointCommand;
-import top.mcfpp.mod.debugger.command.FunctionInAction;
-import top.mcfpp.mod.debugger.command.FunctionStackManager;
+
+import static top.mcfpp.mod.debugger.utils.Debugger.*;
+
 
 @Mixin(FixedCommandAction.class)
 public class FixCommandActionMixin<T extends AbstractServerCommandSource<T>> {
@@ -27,8 +27,8 @@ public class FixCommandActionMixin<T extends AbstractServerCommandSource<T>> {
     @Inject(method = "execute(Lnet/minecraft/server/command/AbstractServerCommandSource;Lnet/minecraft/command/CommandExecutionContext;Lnet/minecraft/command/Frame;)V", at = @At("HEAD"))
     private void execute(T abstractServerCommandSource, CommandExecutionContext<T> commandExecutionContext, Frame frame, CallbackInfo ci) {
         if(frame.depth() == 0) return;
-        if(BreakPointCommand.isDebugging){
-            if(BreakPointCommand.moveSteps > 0) BreakPointCommand.moveSteps --;
+        if(isDebugging){
+            if(moveSteps > 0) moveSteps --;
             if(this.command.startsWith("breakpoint")) return;
             if(abstractServerCommandSource instanceof ServerCommandSource serverCommandSource){
                 var players = serverCommandSource.getServer().getPlayerManager().getPlayerList();

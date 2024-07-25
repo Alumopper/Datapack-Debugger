@@ -8,5 +8,12 @@
   "commands.breakpoint.move.not_debugging": "只能在断点调试状态下使用`move`命令",
   "commands.breakpoint.step.fail": "只能在断点调试状态下使用`step`命令",
   "commands.breakpoint.step.over": "当前刻执行完毕，已退出断点",
-  "commands.breakpoint.run": "已执行：%s"
+  "commands.breakpoint.run": "已执行：%s",
+
+  "itemGroup.datapack-debugger": "数据包调试器",
+
+  "item.datapack-debugger.step": "步过",
+  "item.datapack-debugger.break": "暂停",
+  "item.datapack-debugger.continue": "恢复",
+  "item.datapack-debugger.stack": "显示栈"
 }

@@ -5,7 +5,6 @@ import net.minecraft.command.*;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.server.command.AbstractServerCommandSource;
-import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.ExpandedMacro;
 import net.minecraft.server.function.Procedure;
 import net.minecraft.server.function.Tracer;
@@ -25,7 +24,7 @@ import java.lang.reflect.Field;
 import java.util.Deque;
 import java.util.List;
 
-import static top.mcfpp.mod.debugger.command.BreakPointCommand.*;
+import static top.mcfpp.mod.debugger.utils.Debugger.*;
 
 @Mixin(CommandExecutionContext.class)
 abstract public class CommandExecutionContextMixin<T> {
