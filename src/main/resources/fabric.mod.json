@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
 	"id": "datapack-debugger",
-	"version": "1.0.1",
+	"version": "1.1.2",
 	"name": "Datapack Debugger",
 	"description": "A mod implements breakpoint functionality to datapack development.",
 	"authors": [
