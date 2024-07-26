@@ -26,6 +26,7 @@ public class BreakPointCommand {
 
     public static boolean isDebugCommand = false;
     public static boolean isDebugging = false;
+    public static boolean debugMode = true;
     public static int moveSteps = 0;
     public static final Deque<CommandExecutionContext<?>> storedCommandExecutionContext = Queues.newArrayDeque();
     private static final org.slf4j.Logger LOGGER = DatapackDebugger.getLogger();
@@ -35,6 +36,7 @@ public class BreakPointCommand {
             dispatcher.register(literal("breakpoint")
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(context -> {
+                        if(!debugMode) return 1;
                         var server = context.getSource().getServer();
                         if(server != null){
                             var players = server.getPlayerManager().getPlayerList();
@@ -117,8 +119,27 @@ public class BreakPointCommand {
                     )
                     .then(literal("clear")
                             .executes(context -> {
+                                isDebugCommand = false;
+                                isDebugging = false;
+                                debugMode = true;
+                                moveSteps = 0;
+                                storedCommandExecutionContext.clear();
                                 FunctionStackManager.functionStack.clear();
                                 FunctionStackManager.source.clear();
+                                return 1;
+                            })
+                    )
+                    .then(literal("on")
+                            .executes(context -> {
+                                context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.on"), false);
+                                debugMode = true;
+                                return 1;
+                            })
+                    )
+                    .then(literal("off")
+                            .executes(context -> {
+                                context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.off"), false);
+                                debugMode = false;
                                 return 1;
                             })
                     )
