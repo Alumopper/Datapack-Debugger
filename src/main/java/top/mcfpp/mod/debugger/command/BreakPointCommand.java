@@ -9,6 +9,7 @@ import static net.minecraft.server.command.CommandManager.argument;
 
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtHelper;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
@@ -119,13 +120,7 @@ public class BreakPointCommand {
                     )
                     .then(literal("clear")
                             .executes(context -> {
-                                isDebugCommand = false;
-                                isDebugging = false;
-                                debugMode = true;
-                                moveSteps = 0;
-                                storedCommandExecutionContext.clear();
-                                FunctionStackManager.functionStack.clear();
-                                FunctionStackManager.source.clear();
+                                clear();
                                 return 1;
                             })
                     )
@@ -145,6 +140,16 @@ public class BreakPointCommand {
                     )
             );
         });
+    }
+
+    public static void clear(){
+        isDebugCommand = false;
+        isDebugging = false;
+        debugMode = true;
+        moveSteps = 0;
+        storedCommandExecutionContext.clear();
+        FunctionStackManager.functionStack.clear();
+        FunctionStackManager.source.clear();
     }
 
     private static void breakPoint(@NotNull ServerCommandSource source) {
