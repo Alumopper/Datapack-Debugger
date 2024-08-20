@@ -1,16 +1,15 @@
 package top.mcfpp.mod.debugger.mixin;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
-import net.minecraft.server.function.FunctionBuilder;
 import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import top.mcfpp.mod.debugger.command.FunctionTextLoader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,4 +30,8 @@ public interface CommandFunctionMixin {
         return list;
     }
 
+    @Inject(method = "create",at = @At("HEAD"))
+    private static <T extends AbstractServerCommandSource<T>> void create(Identifier id, CommandDispatcher<T> dispatcher, T source, List<String> lines, CallbackInfoReturnable<CommandFunction<T>> cir) {
+        FunctionTextLoader.put(id,lines);
+    }
 }
