@@ -15,10 +15,10 @@ public class DatapackBreakpointClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		stepInto = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-				"net.gunivers.step", // The translation key of the keybinding's name
+				"datapack-debugger.step", // The translation key of the keybinding's name
 				InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
 				GLFW.GLFW_KEY_F7, // The keycode of the key
-				"net.gunivers.datapack_debugger" // The translation key of the keybinding's category.
+				"datapack-debugger.name" // The translation key of the keybinding's category.
 		));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {

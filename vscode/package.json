@@ -1,11 +1,11 @@
 {
-  "name": "websocket-adapter",
-  "displayName": "WebSocket Debug Adapter",
+  "name": "datapack-debugger",
+  "displayName": "Datapack Debugger",
   "version": "0.52.0",
-  "publisher": "ms-vscode",
-  "description": "Starter extension for developing debug adapters for VS Code.",
+  "publisher": "gunivers",
+  "description": "Debug adapter for Minecraft datapacks.",
   "author": {
-    "name": "Microsoft Corporation"
+    "name": "Gunivers"
   },
   "license": "MIT",
   "keywords": [
@@ -21,10 +21,10 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/Microsoft/vscode-mock-debug.git"
+    "url": "https://github.com/mcbookshelf/datapack-debugger.git"
   },
   "bugs": {
-    "url": "https://github.com/Microsoft/vscode-mock-debug/issues"
+    "url": "https://github.com/mcbookshelf/datapack-debugger/issues"
   },
   "scripts": {
     "compile": "tsc -p ./",
@@ -79,20 +79,20 @@
     ],
     "debuggers": [
       {
-        "type": "websocket-debug",
+        "type": "datapack-debugger",
         "languages": [
           "mcfunction"
         ],
-        "label": "Mock Debug",
+        "label": "Datapack Debugger",
         "configurationAttributes": {
           "attach": {
             "required": [
-              "program"
+              "address"
             ],
             "properties": {
               "address": {
                 "type": "string",
-                "description": "The address of the debug server.",
+                "description": "The complete address of the debug server. Format: ws://hostname:port/path",
                 "default": "ws://localhost:25599/dap"
               },
               "pathMapping": {
@@ -104,28 +104,32 @@
         },
         "initialConfigurations": [
           {
-            "type": "websocket-debug",
-            "request": "launch",
-            "name": "Ask for file name",
-            "program": "${workspaceFolder}/${command:AskForProgramName}",
-            "stopOnEntry": true
+            "type": "datapack-debugger",
+            "request": "attach",
+            "name": "Connect to Minecraft",
+            "address": "localhost:25599/dap",
+            "pathMapping": {
+              "/remote/path": "${workspaceFolder}"
+            }
           }
         ],
         "configurationSnippets": [
           {
-            "label": "Mock Debug: Launch",
-            "description": "A new configuration for 'debugging' a user selected markdown file.",
+            "label": "Datapack Debugger: Connect to Server",
+            "description": "Connect to Minecraft.",
             "body": {
-              "type": "websocket-debug",
-              "request": "launch",
-              "name": "Ask for file name",
-              "program": "^\"\\${workspaceFolder}/\\${command:AskForProgramName}\"",
-              "stopOnEntry": true
+              "type": "datapack-debugger",
+              "request": "attach",
+              "name": "Connect to Minecraft",
+              "address": "localhost:25599/dap",
+              "pathMapping": {
+                "/remote/path": "${workspaceFolder}"
+              }
             }
           }
         ],
         "variables": {
-          "AskForProgramName": "extension.mock-debug.getProgramName"
+          "AskForProgramName": "extension.datapack-debugger.getProgramName"
         }
       }
     ]

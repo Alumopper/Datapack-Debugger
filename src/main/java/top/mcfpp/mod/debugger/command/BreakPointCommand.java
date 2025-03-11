@@ -65,7 +65,7 @@ public class BreakPointCommand {
                         if(server != null){
                             var players = server.getPlayerManager().getPlayerList();
                             for (var player : players){
-                                player.sendMessage(Text.translatable("commands.breakpoint.set"));
+                                player.sendMessage(Text.translatable("datapack-debugger.commands.breakpoint.set"));
                             }
                         }
                         DebuggerState.get().triggerBreakpoint(context.getSource());
@@ -101,7 +101,7 @@ public class BreakPointCommand {
                     )
                     .then(literal("continue")
                             .executes(context -> {
-                                context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.move"), false);
+                                context.getSource().sendFeedback(() -> Text.translatable("datapack-debugger.commands.breakpoint.move"), false);
                                 continueExec(context.getSource());
                                 return 1;
                             })
@@ -114,9 +114,9 @@ public class BreakPointCommand {
                                         var nbt = getNBT(key, context.getSource());
                                         if(nbt != null){
                                             if(nbt.getRight()){
-                                                context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.get", key, NbtHelper.toPrettyPrintedText(nbt.getLeft())), false);
+                                                context.getSource().sendFeedback(() -> Text.translatable("datapack-debugger.commands.breakpoint.get", key, NbtHelper.toPrettyPrintedText(nbt.getLeft())), false);
                                             }else {
-                                                context.getSource().sendError(Text.translatable("commands.breakpoint.get.fail.not_macro"));
+                                                context.getSource().sendError(Text.translatable("datapack-debugger.commands.breakpoint.get.fail.not_macro"));
                                             }
                                         }
                                         return 1;
@@ -125,7 +125,7 @@ public class BreakPointCommand {
                             .executes(context -> {
                                 final var args = getAllNBT(context.getSource());
                                 if(args == null){
-                                    context.getSource().sendError(Text.translatable("commands.breakpoint.get.fail.not_macro"));
+                                    context.getSource().sendError(Text.translatable("datapack-debugger.commands.breakpoint.get.fail.not_macro"));
                                 }else {
                                     context.getSource().sendFeedback(() -> (NbtHelper.toPrettyPrintedText(args)), false);
                                 }
@@ -164,14 +164,14 @@ public class BreakPointCommand {
                     )
                     .then(literal("on")
                             .executes(context -> {
-                                context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.on"), false);
+                                context.getSource().sendFeedback(() -> Text.translatable("datapack-debugger.commands.breakpoint.on"), false);
                                 debugMode = true;
                                 return 1;
                             })
                     )
                     .then(literal("off")
                             .executes(context -> {
-                                context.getSource().sendFeedback(() -> Text.translatable("commands.breakpoint.off"), false);
+                                context.getSource().sendFeedback(() -> Text.translatable("datapack-debugger.commands.breakpoint.off"), false);
                                 debugMode = false;
                                 return 1;
                             })
@@ -203,7 +203,7 @@ public class BreakPointCommand {
      */
     public static void step(int steps, ServerCommandSource source) {
         if (!isDebugging) {
-            source.sendError(Text.translatable("commands.breakpoint.step.fail"));
+            source.sendError(Text.translatable("datapack-debugger.commands.breakpoint.step.fail"));
             return;
         }
         isDebugCommand = true;
@@ -229,7 +229,7 @@ public class BreakPointCommand {
                         break;
                     }
                 } else {
-                    source.sendFeedback(() -> Text.translatable("commands.breakpoint.step.over"), false);
+                    source.sendFeedback(() -> Text.translatable("datapack-debugger.commands.breakpoint.step.over"), false);
                     continueExec(source);
                 }
             }
@@ -253,7 +253,7 @@ public class BreakPointCommand {
      */
     public static void continueExec(@NotNull ServerCommandSource source) {
         if(!isDebugging){
-            source.sendError(Text.translatable("commands.breakpoint.move.not_debugging"));
+            source.sendError(Text.translatable("datapack-debugger.commands.breakpoint.move.not_debugging"));
             return;
         }
         source.getServer().getTickManager().setFrozen(false);
@@ -288,7 +288,7 @@ public class BreakPointCommand {
             return (Pair<NbtElement, Boolean>) method.invoke(context, key);
         }catch (Exception e){
             LOGGER.error(e.toString());
-            source.sendError(Text.translatable("commands.breakpoint.get.fail.error", e.toString()));
+            source.sendError(Text.translatable("datapack-debugger.commands.breakpoint.get.fail.error", e.toString()));
             return null;
         }
     }
@@ -310,7 +310,7 @@ public class BreakPointCommand {
             return (NbtElement) method.invoke(context);
         }catch (Exception e){
             LOGGER.error(e.toString());
-            source.sendError(Text.translatable("commands.breakpoint.get.fail.error", e.toString()));
+            source.sendError(Text.translatable("datapack-debugger.commands.breakpoint.get.fail.error", e.toString()));
             return null;
         }
     }

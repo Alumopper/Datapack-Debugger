@@ -30,7 +30,7 @@ public class FixCommandActionMixin<T extends AbstractServerCommandSource<T>> {
                 // We send to each player the executing command
                 var players = serverCommandSource.getServer().getPlayerManager().getPlayerList();
                 for(var player : players){
-                    player.sendMessage(Text.translatable("commands.breakpoint.run", this.command));
+                    player.sendMessage(Text.translatable("datapack-debugger.commands.breakpoint.run", this.command));
                 }
             }
         }

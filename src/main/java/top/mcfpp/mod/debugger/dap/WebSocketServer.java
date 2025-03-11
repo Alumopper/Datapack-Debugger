@@ -1,21 +1,25 @@
 package top.mcfpp.mod.debugger.dap;
 
 import jakarta.websocket.*;
-import jakarta.websocket.server.ServerEndpoint;
+import jakarta.websocket.server.ServerApplicationConfig;
+import jakarta.websocket.server.ServerEndpointConfig;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.eclipse.lsp4j.debug.launch.DSPLauncher;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.glassfish.tyrus.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import top.mcfpp.mod.debugger.config.DebuggerConfig;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.HashSet;
 
-@ServerEndpoint(value="/dap")
-public class WebSocketServer {
+// We now define the endpoint programmatically, not with annotation
+public class WebSocketServer extends Endpoint {
 
     private static final Logger logger = LoggerFactory.getLogger("datapack-debugger");
 
@@ -24,8 +28,9 @@ public class WebSocketServer {
     private final LinkedBlockingQueue<byte[]> messageQueue = new LinkedBlockingQueue<>();
     private Session currentSession;
 
-    @OnOpen
-    public void onOpen(Session session) {
+    // This replaces the @OnOpen annotation
+    @Override
+    public void onOpen(Session session, EndpointConfig config) {
         logger.info("WebSocket connected: {}", session.getRequestURI());
         
         // Store the session for later clean closure
@@ -38,6 +43,21 @@ public class WebSocketServer {
         session.setMaxTextMessageBufferSize(65536);
         session.setMaxBinaryMessageBufferSize(65536);
         
+        // Add message handlers for text and binary
+        session.addMessageHandler(new MessageHandler.Whole<String>() {
+            @Override
+            public void onMessage(String message) {
+                messageQueue.offer(message.getBytes());
+            }
+        });
+        
+        session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
+            @Override
+            public void onMessage(byte[] message) {
+                messageQueue.offer(message);
+            }
+        });
+        
         // Initialize a new DAP server for this session
         dapServer = new DapServer();
         InputStream in = new WebSocketInputStream(messageQueue);
@@ -47,23 +67,15 @@ public class WebSocketServer {
         launcher.startListening();
     }
 
-    @OnMessage
-    public void onMessage(String message) {
-        messageQueue.offer(message.getBytes());
-    }
-
-    @OnMessage
-    public void onMessage(byte[] message) {
-        messageQueue.offer(message);
-    }
-
-    @OnClose
+    // This replaces the @OnClose annotation
+    @Override
     public void onClose(Session session, CloseReason closeReason) {
         logger.info("WebSocket closed: {}", closeReason);
         cleanup();
     }
 
-    @OnError
+    // This replaces the @OnError annotation
+    @Override
     public void onError(Session session, Throwable throwable) {
         logger.error("Error in DAP server", throwable);
         cleanup();
@@ -108,6 +120,42 @@ public class WebSocketServer {
     }
 
     private static Server server;
+    
+    /**
+     * Configuration class for the WebSocket endpoint
+     */
+    public static class WebSocketConfigurator implements ServerApplicationConfig {
+        @Override
+        public Set<ServerEndpointConfig> getEndpointConfigs(Set<Class<? extends Endpoint>> endpointClasses) {
+            Set<ServerEndpointConfig> configs = new HashSet<>();
+            
+            // Create a programmatic endpoint with the configured path
+            String path = "/" + DebuggerConfig.getInstance().getPath();
+            ServerEndpointConfig config = ServerEndpointConfig.Builder
+                .create(WebSocketServer.class, path)
+                .build();
+                
+            configs.add(config);
+            return configs;
+        }
+
+        @Override
+        public Set<Class<?>> getAnnotatedEndpointClasses(Set<Class<?>> scanned) {
+            // We don't use annotated endpoints
+            return new HashSet<>();
+        }
+    }
+
+    /**
+     * Launches the WebSocket server for DAP communication
+     * This method ensures any previous server is stopped before creating a new one
+     * 
+     * @return A reference to the started server, if startup was successful
+     */
+    public static Optional<Server> launch() {
+        // Use configured port from settings
+        return launch(DebuggerConfig.getInstance().getPort());
+    }
 
     /**
      * Launches the WebSocket server for DAP communication
@@ -130,11 +178,15 @@ public class WebSocketServer {
             }
         }
         
+        // Get configuration values
+        DebuggerConfig config = DebuggerConfig.getInstance();
+        String path = config.getPath();
+        
         // Create and start a new server
-        server = new Server("localhost", port, "/", null, WebSocketServer.class);
+        server = new Server("localhost", port, "/", null, WebSocketConfigurator.class);
         try {
             server.start();
-            logger.info("Jakarta WebSocket DAP server is running on ws://localhost:{}/dap", port);
+            logger.info("Jakarta WebSocket DAP server is running on ws://localhost:{}/{}", port, path);
         } catch (Exception e) {
             logger.error("Error starting DAP server", e);
             try {

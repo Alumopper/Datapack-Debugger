@@ -1,16 +1,20 @@
 {
 	"schemaVersion": 1,
 	"id": "datapack-debugger",
-	"version": "1.1.2",
+	"version": "${version}",
 	"name": "Datapack Debugger",
-	"description": "A mod implements breakpoint functionality to datapack development.",
+	"description": "A mod that allows debugging datapacks with breakpoints.",
 	"authors": [
+		"Gunivers",
+		"theogiraudet",
 		"Alumopper"
 	],
 	"contact": {
-		"sources": "https://github.com/Alumopper/Datapack-Debugger"
+		"homepage": "https://github.com/Gunivers/Datapack-Debugger",
+		"sources": "https://github.com/Gunivers/Datapack-Debugger",
+		"issues": "https://github.com/Gunivers/Datapack-Debugger/issues"
 	},
-	"license": "CC0-1.0",
+	"license": "MIT",
 	"icon": "assets/datapack-debugger/icon.png",
 	"environment": "*",
 	"entrypoints": {
@@ -19,6 +23,9 @@
 		],
 		"client": [
 			"top.mcfpp.mod.debugger.DatapackBreakpointClient"
+		],
+		"modmenu": [
+			"top.mcfpp.mod.debugger.config.ModMenuIntegration"
 		]
 	},
 	"mixins": [
@@ -32,8 +39,11 @@
 		"fabricloader": ">=0.15.11",
 		"minecraft": "~1.21",
 		"java": ">=21",
-		"fabric-api": "*"
+		"fabric-api": "*",
+		"cloth-config": ">=17.0.144"
 	},
-	"suggests": {},
+	"suggests": {
+		"modmenu": ">=13.0.2"
+	},
 	"accessWidener": "datapack-debugger.accesswidener"
 }

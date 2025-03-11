@@ -1,0 +1,18 @@
+{
+  "datapack-debugger.commands.breakpoint.put": "Point d'arrêt ajouté à %s",
+  "datapack-debugger.commands.breakpoint.put.bad": "Impossible d'ajouter un point d'arrêt à %s, l'emplacement n'est pas valide",
+  "datapack-debugger.commands.breakpoint.del": "Point d'arrêt supprimé de %s",
+  "datapack-debugger.commands.breakpoint.del.bad": "Impossible de supprimer un point d'arrêt de %s, aucun point d'arrêt n'a été trouvé",
+  "datapack-debugger.commands.breakpoint.on": "Le point d'arrêt est maintenant actif",
+  "datapack-debugger.commands.breakpoint.off": "Le point d'arrêt est maintenant inactif",
+  "datapack-debugger.step": "Avancer d'un pas",
+  "datapack-debugger.name": "Debugger de Datapack",
+  "datapack-debugger.config.title": "Configuration du Debugger de Datapack",
+  "datapack-debugger.config.category.main": "Paramètres principaux",
+  "datapack-debugger.config.port": "Port WebSocket",
+  "datapack-debugger.config.port.tooltip": "Le port sur lequel le serveur WebSocket du debugger s'exécutera (1024-65535)",
+  "datapack-debugger.config.path": "Chemin WebSocket",
+  "datapack-debugger.config.path.tooltip": "Le chemin d'accès pour la connexion WebSocket",
+  "datapack-debugger.config.server_address": "Adresse du serveur : %s",
+  "datapack-debugger.config.server_address.tooltip": "L'adresse complète pour connecter votre client de débogage"
+} 

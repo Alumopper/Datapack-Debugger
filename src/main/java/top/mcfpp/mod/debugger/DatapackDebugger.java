@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import top.mcfpp.mod.debugger.command.BreakPointCommand;
 import top.mcfpp.mod.debugger.command.FunctionPathGetter;
+import top.mcfpp.mod.debugger.config.DebuggerConfig;
 import top.mcfpp.mod.debugger.dap.DebuggerState;
 import top.mcfpp.mod.debugger.dap.WebSocketServer;
 
@@ -28,6 +29,12 @@ public class DatapackDebugger implements ModInitializer {
 	 */
 	@Override
 	public void onInitialize() {
+		// Load configuration
+		DebuggerConfig.getInstance();
+		logger.info("Datapack Debugger configured to run on localhost:{}/{}",
+			DebuggerConfig.getInstance().getPath(),
+			DebuggerConfig.getInstance().getPort());
+		
 		// Clear breakpoints when server starts
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> BreakPointCommand.clear());
 		
@@ -39,8 +46,8 @@ public class DatapackDebugger implements ModInitializer {
 			DebuggerState.get().setServer(server);
 		});
 		
-		// Start WebSocket server for DAP communication
-		ServerLifecycleEvents.SERVER_STARTED.register(server -> WebSocketServer.launch(25599).ifPresent(wss -> webSocketServer = wss));
+		// Start WebSocket server for DAP communication using configured settings
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> WebSocketServer.launch().ifPresent(wss -> webSocketServer = wss));
 		
 		// Handle server shutdown to clean up resources
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {

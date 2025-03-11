@@ -11,6 +11,7 @@
 import WebSocketStream from 'websocket-stream';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { ProtocolServer } from '@vscode/debugadapter/lib/protocol';
+import * as vscode from 'vscode';
 
 const WEBSOCKET_REGEX = /^wss?:\/\/|^https?:\/\//;
 const SOCKET_TIMEOUT = 10000;
@@ -82,9 +83,25 @@ abstract class DebugAdapter extends ProtocolServer {
         super();
         this.stream = this.createStream(address);
         this.stream.on('error', (error) => {
-            // Close vscode thread
-            
-        })
+            // Capture et journalise l'erreur complète
+            console.error('Stream error in DebugAdapter:', error);
+            this.emit('error', {
+                seq: 0,
+                type: 'event',
+                event: 'error',
+                body: `Stream error: ${error ? (error.message || JSON.stringify(error)) : 'Unknown error'}`
+            });
+        });
+        
+        this.stream.on('close', () => {
+            console.log('Stream closed');
+            this.emit('close', {
+                seq: 0,
+                type: 'event',
+                event: 'close'
+            });
+        });
+        
         super.start(this.stream, this.stream);
     }
 
@@ -102,10 +119,42 @@ abstract class DebugAdapter extends ProtocolServer {
 
 class WebsocketDebugAdapter extends DebugAdapter {
     protected createStream(address: string): NodeJS.ReadWriteStream {
-        const stream = WebSocketStream(address, { handshakeTimeout: SOCKET_TIMEOUT });
-        stream.on('error', (error) => {
-            console.error('WebSocket error:', error);
-        });
-        return stream;
+        console.log(`Trying to connect to WebSocket server at: ${address}`);
+        
+        try {
+            // Formater l'adresse pour s'assurer qu'elle est valide
+            let formattedAddress = address;
+            if (!formattedAddress.startsWith('ws://') && !formattedAddress.startsWith('wss://')) {
+                // Si l'adresse ne commence pas par ws:// ou wss://, ajouter ws://
+                formattedAddress = `ws://${formattedAddress}`;
+                console.log(`Reformatted address to: ${formattedAddress}`);
+            }
+            
+            const options = { 
+                handshakeTimeout: SOCKET_TIMEOUT,
+                perMessageDeflate: false  // Disable compression for better compatibility
+            };
+            
+            console.log(`Connecting with options:`, options);
+            const stream = WebSocketStream(formattedAddress, options);
+            
+            stream.on('error', (error) => {
+                const errorMessage = error ? (error.message || JSON.stringify(error)) : 'Unknown error';
+                console.error(`WebSocket connection error: ${errorMessage}`);
+                vscode.window.showErrorMessage(`Failed to connect to debug server at ${formattedAddress}: ${errorMessage}`);
+            });
+            
+            stream.on('connect', () => {
+                console.log(`Successfully connected to WebSocket server at: ${formattedAddress}`);
+                vscode.window.showInformationMessage(`Connected to debug server at ${formattedAddress}`);
+            });
+            
+            return stream;
+        } catch (error: any) {
+            const errorMessage = error ? (error.message || JSON.stringify(error)) : 'Unknown error';
+            console.error(`Failed to create WebSocket connection: ${errorMessage}`);
+            vscode.window.showErrorMessage(`Failed to create WebSocket connection to ${address}: ${errorMessage}`);
+            throw error;
+        }
     }
 }
