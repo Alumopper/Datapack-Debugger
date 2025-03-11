@@ -80,11 +80,10 @@ abstract public class CommandExecutionContextMixin<T> {
         // Create a new frame for the procedure call
         Frame frame = frame(context, returnValueConsumer);
         try {
-            // Use reflection to access the private 'function' field of the frame
-            Field field = frame.getClass().getDeclaredField("function");
-            field.setAccessible(true);
-            field.set(frame, procedure);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
+            // Use EncapsulationBreaker instead of reflection
+            EncapsulationBreaker.getAttribute(frame, "function")
+                    .ifPresent(ignored -> EncapsulationBreaker.callFunction(frame, "setFunction", procedure));
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         // Add the command to the queue with the modified frame
@@ -122,45 +121,18 @@ abstract public class CommandExecutionContextMixin<T> {
                 return;
             }
 
-            boolean isDapBreakpoint = false;
+            boolean isDapBreakpoint = processBreakpointForEntry(commandQueueEntry);
 
-            if(commandQueueEntry.frame().depth() > 0) {
-                    var function = (ExpandedMacro<?>) EncapsulationBreaker.getAttribute(commandQueueEntry.frame(), "function").get();
-                    var funcId = function.id();
-
-                    if (commandQueueEntry.action() instanceof SteppedCommandAction<?, ?> steppedAction) {
-                        var index = (int) EncapsulationBreaker.getAttribute(steppedAction, "nextActionIndex").get();
-                        if(index >= 0) {
-                            var lineOpt = (Optional<?>) EncapsulationBreaker.getAttribute(function.entries().get(index), "sourceLine");
-                            if (lineOpt.isPresent()) {
-                                var line = (int) lineOpt.get();
-                                isDapBreakpoint = DebuggerState.get().mustStop(funcId.toString(), line);
-                                DebuggerState.get().setCurrentLine(funcId.toString(), line);
-                                if (isDapBreakpoint) {
-                                    DebuggerState.get().triggerBreakpoint(DebuggerState.get().getServer().getCommandSource());
-                                }
-                            } else if(function.entries().get(index) instanceof FunctionInAction<?> functionInAction) {
-                                functionInAction.setCallerContext(DebuggerState.get().getCurrentFile(), DebuggerState.get().getCurrentLine());
-                            }
-                        }
-                    }
-                }
             // If we're debugging and the command is inside a function (depth > 0)
             // and we're not stepping through code, pause execution
             if(isDebugging && (commandQueueEntry.frame().depth() != 0 && moveSteps == 0 || isDapBreakpoint)) {
-                // Put the command back in the queue
-                commandQueue.addFirst(commandQueueEntry);
-                // Store the current context if not already stored
-                if(storedCommandExecutionContext.peekFirst() != THIS) {
-                    storedCommandExecutionContext.addFirst(THIS);
-                }
+                pauseExecution(commandQueueEntry, THIS);
                 ci.cancel();
                 return;
             }
 
             // Update the current depth and execute the command
-            this.currentDepth = commandQueueEntry.frame().depth();
-            commandQueueEntry.execute(THIS);
+            executeCommandEntry(commandQueueEntry, THIS);
             
             // Check for queue overflow
             if (this.queueOverflowed) {
@@ -177,99 +149,6 @@ abstract public class CommandExecutionContextMixin<T> {
     }
 
     /**
-     * Retrieves the NBT value for a given key from the current command context.
-     * @param key The key to look up
-     * @return A pair containing the NBT element and whether it's a macro, or null if not found
-     */
-    @Unique
-    private Pair<NbtElement, Boolean> getKey(String key){
-        CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
-
-        if (commandQueueEntry == null) {
-            return null;
-        }
-
-        var frame = commandQueueEntry.frame();
-        try {
-            // Use reflection to access the function and its arguments
-            // These fields are private in the original classes
-            Field field = frame.getClass().getDeclaredField("function");
-            field.setAccessible(true);
-            var function = (ExpandedMacro<T>) field.get(frame);
-
-            // Get the arguments field from the function
-            Field field1 = function.getClass().getDeclaredField("arguments");
-            field1.setAccessible(true);
-            var args = (NbtCompound)field1.get(function);
-
-            // Return null if no arguments are available
-            if(args == null){
-                return new Pair<>(null, false);
-            }
-            // Return the requested NBT value and indicate it's from a macro
-            return new Pair<>(args.get(key), true);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            LOGGER.error(e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Retrieves all NBT values from the current command context.
-     * @return The NBT compound containing all values, or null if not available
-     */
-    @Unique
-    private NbtElement getAllNBT(){
-        CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
-
-        if (commandQueueEntry == null) {
-            return null;
-        }
-
-        var frame = commandQueueEntry.frame();
-        try {
-            Field field = frame.getClass().getDeclaredField("function");
-            field.setAccessible(true);
-            var function = (ExpandedMacro<T>) field.get(frame);
-            Field field1 = function.getClass().getDeclaredField("arguments");
-            field1.setAccessible(true);
-            return (NbtCompound)field1.get(function);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Retrieves all available keys from the current command context.
-     * @return A list of all available keys, or null if no NBT data is available
-     */
-    @Unique
-    private List<String> getKeys(){
-        CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
-
-        if (commandQueueEntry == null) {
-            return null;
-        }
-
-        var frame = commandQueueEntry.frame();
-        try {
-            Field field = frame.getClass().getDeclaredField("function");
-            field.setAccessible(true);
-            var function = (ExpandedMacro<T>) field.get(frame);
-            Field field1 = function.getClass().getDeclaredField("arguments");
-            field1.setAccessible(true);
-            var args = (NbtCompound)field1.get(function);
-            if(args != null){
-                return args.getKeys().stream().toList();
-            }else {
-                return null;
-            }
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
      * Handles stepping through command execution.
      * This method manages the command queue and handles breakpoints during step-by-step execution.
      */
@@ -281,11 +160,8 @@ abstract public class CommandExecutionContextMixin<T> {
         this.queuePendingCommands();
 
         while (true) {
-            // If we are in step over mode, so we update the stepOverDepth to the current depth only if the variable is not already set or if the debug mode is activated
-            // This last condition allows us to update the stepOverDepth if we meet a nested breakpoint to still stop at it.
-            if(isStepOver && (stepOverDepth == -1 || isDebugging)) {
-                stepOverDepth = this.currentDepth;
-            }
+            // If we are in step over mode, update the stepOverDepth if needed
+            updateStepOverDepthIfNeeded();
 
             // Check command execution limits
             if (this.commandsRemaining <= 0) {
@@ -300,49 +176,22 @@ abstract public class CommandExecutionContextMixin<T> {
                 return;
             }
 
-            if(commandQueueEntry.frame().depth() > 0) {
-                var function = (ExpandedMacro<?>) EncapsulationBreaker.getAttribute(commandQueueEntry.frame(), "function").get();
-                var funcId = function.id();
-
-                if (commandQueueEntry.action() instanceof SteppedCommandAction<?, ?> steppedAction) {
-                    var index = (int) EncapsulationBreaker.getAttribute(steppedAction, "nextActionIndex").get();
-                    if(index >= 0) {
-                        var lineOpt = (Optional<?>) EncapsulationBreaker.getAttribute(function.entries().get(index), "sourceLine");
-                        if (lineOpt.isPresent()) {
-                            var line = (int) lineOpt.get();
-                            DebuggerState.get().setCurrentLine(funcId.toString(), line);
-                            DebuggerState.get().stop("step");
-                        } else if(function.entries().get(index) instanceof FunctionInAction<?> functionInAction) {
-                            functionInAction.setCallerContext(DebuggerState.get().getCurrentFile(), DebuggerState.get().getCurrentLine());
-                        }
-                    }
-                }
-            }
+            processDebuggerStateForEntry(commandQueueEntry);
 
             // If we're debugging and the command is inside a function
             // and we're not stepping through code, pause execution
             if(isDebugging && commandQueueEntry.frame().depth() != 0 && moveSteps == 0) {
-                // Put the command back in the queue
-                commandQueue.addFirst(commandQueueEntry);
-                // Store the current context if not already stored
-                if(storedCommandExecutionContext.peekFirst() != THIS) {
-                    storedCommandExecutionContext.addFirst(THIS);
-                }
-                if(isStepOver) {
-                    isStepOver = false;
-                    stepOverDepth = -1;
-                }
+                pauseExecution(commandQueueEntry, THIS);
+                resetStepOverIfNeeded();
                 return;
             }
 
-            // When we are in step over, we only activate the debug mode if we are in the same depth level than the one where the step over has been triggered
-            // If the debug mode is already activate and the previous condition is false, then we keep the debug mode since this means we find a nested breakpoint
-            isDebugging = (isStepOver && this.currentDepth >= commandQueueEntry.frame().depth() && this.currentDepth == stepOverDepth) || (!isStepOver && isDebugging);
+            // Update debugging state based on step over conditions
+            updateDebuggingState(commandQueueEntry);
 
-            // Update depth and execute the command
-            this.currentDepth = commandQueueEntry.frame().depth();
-
-            commandQueueEntry.execute(THIS);
+            // Execute the command
+            executeCommandEntry(commandQueueEntry, THIS);
+            
             // Check for queue overflow
             if (this.queueOverflowed) {
                 LOGGER.error("Command execution stopped due to command queue overflow (max {})", 10000000);
@@ -357,14 +206,272 @@ abstract public class CommandExecutionContextMixin<T> {
     }
 
     /**
+     * Updates the debugging state based on step over conditions.
+     * 
+     * @param commandQueueEntry The current command entry
+     */
+    @Unique
+    private void updateDebuggingState(CommandQueueEntry<T> commandQueueEntry) {
+        // When we are in step over, we only activate the debug mode if we are in the same depth level than the one where the step over has been triggered
+        // If the debug mode is already activate and the previous condition is false, then we keep the debug mode since this means we find a nested breakpoint
+        isDebugging = (isStepOver && this.currentDepth >= commandQueueEntry.frame().depth() && this.currentDepth == stepOverDepth) 
+                     || (!isStepOver && isDebugging);
+    }
+
+    /**
+     * Updates the step over depth if needed.
+     */
+    @Unique
+    private void updateStepOverDepthIfNeeded() {
+        if(isStepOver && (stepOverDepth == -1 || isDebugging)) {
+            stepOverDepth = this.currentDepth;
+        }
+    }
+
+    /**
+     * Resets step over state if needed.
+     */
+    @Unique
+    private void resetStepOverIfNeeded() {
+        if(isStepOver) {
+            isStepOver = false;
+            stepOverDepth = -1;
+        }
+    }
+
+    /**
+     * Executes a command entry and updates the current depth.
+     * 
+     * @param commandQueueEntry The command entry to execute
+     * @param context The command execution context
+     */
+    @Unique
+    private void executeCommandEntry(CommandQueueEntry<T> commandQueueEntry, CommandExecutionContext<T> context) {
+        this.currentDepth = commandQueueEntry.frame().depth();
+        commandQueueEntry.execute(context);
+    }
+
+    /**
+     * Pauses execution by returning the command to the queue and storing the context.
+     * 
+     * @param commandQueueEntry The command entry to pause
+     * @param context The command execution context
+     */
+    @Unique
+    private void pauseExecution(CommandQueueEntry<T> commandQueueEntry, CommandExecutionContext<T> context) {
+        // Put the command back in the queue
+        commandQueue.addFirst(commandQueueEntry);
+        // Store the current context if not already stored
+        if(storedCommandExecutionContext.peekFirst() != context) {
+            storedCommandExecutionContext.addFirst(context);
+        }
+    }
+
+    /**
+     * Processes breakpoint information for a command entry.
+     * 
+     * @param commandQueueEntry The command entry to process
+     * @return true if a breakpoint was triggered, false otherwise
+     */
+    @Unique
+    private boolean processBreakpointForEntry(CommandQueueEntry<T> commandQueueEntry) {
+        if(commandQueueEntry.frame().depth() <= 0) {
+            return false;
+        }
+        
+        var function = getExpandedMacroFromFrame(commandQueueEntry.frame());
+        if(function == null) {
+            return false;
+        }
+        
+        var funcId = function.id();
+
+        if (!(commandQueueEntry.action() instanceof SteppedCommandAction<?, ?> steppedAction)) {
+            return false;
+        }
+        
+        var index = (int) EncapsulationBreaker.getAttribute(steppedAction, "nextActionIndex").get();
+        if(index < 0) {
+            return false;
+        }
+        
+        var lineOpt = (Optional<?>) EncapsulationBreaker.getAttribute(function.entries().get(index), "sourceLine");
+        if (!lineOpt.isPresent()) {
+            if(function.entries().get(index) instanceof FunctionInAction<?> functionInAction) {
+                functionInAction.setCallerContext(DebuggerState.get().getCurrentFile(), DebuggerState.get().getCurrentLine());
+            }
+            return false;
+        }
+        
+        var line = (int) lineOpt.get();
+        boolean isDapBreakpoint = DebuggerState.get().mustStop(funcId.toString(), line);
+        DebuggerState.get().setCurrentLine(funcId.toString(), line);
+        
+        if (isDapBreakpoint) {
+            DebuggerState.get().triggerBreakpoint(DebuggerState.get().getServer().getCommandSource());
+        }
+        
+        return isDapBreakpoint;
+    }
+
+    /**
+     * Processes debugger state information for a command entry.
+     * 
+     * @param commandQueueEntry The command entry to process
+     */
+    @Unique
+    private void processDebuggerStateForEntry(CommandQueueEntry<T> commandQueueEntry) {
+        if(commandQueueEntry.frame().depth() <= 0) {
+            return;
+        }
+        
+        var function = getExpandedMacroFromFrame(commandQueueEntry.frame());
+        if(function == null) {
+            return;
+        }
+        
+        var funcId = function.id();
+
+        if (!(commandQueueEntry.action() instanceof SteppedCommandAction<?, ?> steppedAction)) {
+            return;
+        }
+        
+        var index = (int) EncapsulationBreaker.getAttribute(steppedAction, "nextActionIndex").get();
+        if(index < 0) {
+            return;
+        }
+        
+        var lineOpt = (Optional<?>) EncapsulationBreaker.getAttribute(function.entries().get(index), "sourceLine");
+        if (lineOpt.isPresent()) {
+            var line = (int) lineOpt.get();
+            DebuggerState.get().setCurrentLine(funcId.toString(), line);
+            DebuggerState.get().stop("step");
+        } else if(function.entries().get(index) instanceof FunctionInAction<?> functionInAction) {
+            functionInAction.setCallerContext(DebuggerState.get().getCurrentFile(), DebuggerState.get().getCurrentLine());
+        }
+    }
+
+    /**
+     * Gets the expanded macro from a frame using reflection.
+     * 
+     * @param frame The frame to get the macro from
+     * @return The expanded macro, or null if an error occurred
+     */
+    @Unique
+    private ExpandedMacro<?> getExpandedMacroFromFrame(Frame frame) {
+        try {
+            return (ExpandedMacro<?>) EncapsulationBreaker.getAttribute(frame, "function").get();
+        } catch (Exception e) {
+            LOGGER.error("Failed to get expanded macro from frame: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Retrieves the expanded macro and its arguments from a command queue entry.
+     * 
+     * @param commandQueueEntry The command queue entry
+     * @return A pair containing the expanded macro and its arguments, or null if not available
+     */
+    @Unique
+    private Pair<ExpandedMacro<T>, NbtCompound> getMacroAndArgsFromEntry(CommandQueueEntry<T> commandQueueEntry) {
+        if (commandQueueEntry == null) {
+            return null;
+        }
+
+        var frame = commandQueueEntry.frame();
+        try {
+            // Use EncapsulationBreaker instead of reflection
+            var function = EncapsulationBreaker.getAttribute(frame, "function")
+                    .map(obj -> (ExpandedMacro<T>) obj)
+                    .orElse(null);
+            
+            if (function == null) {
+                return null;
+            }
+
+            // Get the arguments using EncapsulationBreaker
+            var args = EncapsulationBreaker.getAttribute(function, "arguments")
+                    .map(obj -> (NbtCompound) obj)
+                    .orElse(null);
+
+            return new Pair<>(function, args);
+        } catch (Exception e) {
+            LOGGER.error("Failed to get macro and args: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Retrieves the NBT value for a given key from the current command context.
+     * @param key The key to look up
+     * @return A pair containing the NBT element and whether it's a macro, or null if not found
+     */
+    @Unique
+    private Pair<NbtElement, Boolean> getKey(String key) {
+        CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
+        
+        var macroAndArgs = getMacroAndArgsFromEntry(commandQueueEntry);
+        if (macroAndArgs == null) {
+            return null;
+        }
+        
+        var args = macroAndArgs.getRight();
+        // Return null if no arguments are available
+        if (args == null) {
+            return new Pair<>(null, false);
+        }
+        
+        // Return the requested NBT value and indicate it's from a macro
+        return new Pair<>(args.get(key), true);
+    }
+
+    /**
+     * Retrieves all NBT values from the current command context.
+     * @return The NBT compound containing all values, or null if not available
+     */
+    @Unique
+    private NbtElement getAllNBT() {
+        CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
+        
+        var macroAndArgs = getMacroAndArgsFromEntry(commandQueueEntry);
+        if (macroAndArgs == null) {
+            return null;
+        }
+        
+        return macroAndArgs.getRight();
+    }
+
+    /**
+     * Retrieves all available keys from the current command context.
+     * @return A list of all available keys, or null if no NBT data is available
+     */
+    @Unique
+    private List<String> getKeys() {
+        CommandQueueEntry<T> commandQueueEntry = this.commandQueue.peekFirst();
+        
+        var macroAndArgs = getMacroAndArgsFromEntry(commandQueueEntry);
+        if (macroAndArgs == null) {
+            return null;
+        }
+        
+        var args = macroAndArgs.getRight();
+        if (args != null) {
+            return args.getKeys().stream().toList();
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Checks if a command action is a fixed command action.
      * @param action The command action to check
      * @return true if the action is a fixed command action, false otherwise
      */
     @Unique
-    private boolean isFixCommandAction(@NotNull CommandAction<T> action){
+    private boolean isFixCommandAction(@NotNull CommandAction<T> action) {
         // Only check sourced command actions
-        if(!(action instanceof SourcedCommandAction)) return false;
+        if (!(action instanceof SourcedCommandAction)) return false;
         try {
             // Use reflection to check all fields of the action
             Class<?> actionClass = action.getClass();
@@ -389,7 +496,7 @@ abstract public class CommandExecutionContextMixin<T> {
      * @return true if a command action is present, false otherwise
      */
     @Unique
-    private boolean ifContainsCommandAction(){
+    private boolean ifContainsCommandAction() {
         // Simply check if there are any commands in the queue
         return this.commandQueue.peekFirst() != null;
     }

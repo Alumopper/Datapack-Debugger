@@ -12,9 +12,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import top.mcfpp.mod.debugger.EncapsulationBreaker;
 import top.mcfpp.mod.debugger.command.FunctionTextLoader;
 
@@ -49,15 +47,9 @@ public interface CommandFunctionMixin {
         return list;
     }
 
-//    @Inject(method = "create",at = @At("HEAD"))
-//    private static <T extends AbstractServerCommandSource<T>> void create(Identifier id, CommandDispatcher<T> dispatcher, T source, List<String> lines, CallbackInfoReturnable<CommandFunction<T>> cir) {
-//        FunctionTextLoader.put(id,lines);
-//    }
-
-//    @Inject(method = "create",at = @At("HEAD"))
 /**
- * @author
- * @reason
+ * @author theogiraudet
+ * @reason to save in each command the file and source line
  */
 @Overwrite
     static <T extends AbstractServerCommandSource<T>> CommandFunction<T> create(Identifier id, CommandDispatcher<T> dispatcher, T source, List<String> lines) {

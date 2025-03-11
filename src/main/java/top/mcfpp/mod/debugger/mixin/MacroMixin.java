@@ -1,21 +1,16 @@
 package top.mcfpp.mod.debugger.mixin;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.brigadier.CommandDispatcher;
-import net.minecraft.command.SourcedCommandAction;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.ExpandedMacro;
 import net.minecraft.server.function.Macro;
 import net.minecraft.server.function.Procedure;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import top.mcfpp.mod.debugger.command.FunctionInAction;
-import top.mcfpp.mod.debugger.command.FunctionOutAction;
 
 import java.lang.reflect.Field;
 import java.util.List;

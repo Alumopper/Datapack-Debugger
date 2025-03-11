@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import top.mcfpp.mod.debugger.command.BreakPointCommand;
 import top.mcfpp.mod.debugger.command.FunctionPathGetter;
-import top.mcfpp.mod.debugger.dap.DapServer;
 import top.mcfpp.mod.debugger.dap.DebuggerState;
 import top.mcfpp.mod.debugger.dap.WebSocketServer;
 
@@ -31,9 +30,43 @@ public class DatapackDebugger implements ModInitializer {
 	public void onInitialize() {
 		// Clear breakpoints when server starts
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> BreakPointCommand.clear());
-		ServerLifecycleEvents.SERVER_STARTED.register(DebuggerState.get()::setServer);
+		
+		// Reset and initialize debugger state
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+			// Reset the debugger state
+			DebuggerState.get().reset();
+			// Set the server reference
+			DebuggerState.get().setServer(server);
+		});
+		
+		// Start WebSocket server for DAP communication
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> WebSocketServer.launch(25599).ifPresent(wss -> webSocketServer = wss));
-		ServerLifecycleEvents.SERVER_STOPPED.register(server -> webSocketServer.stop());
+		
+		// Handle server shutdown to clean up resources
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+			// First, shut down the debugger state to send termination events
+			try {
+				DebuggerState.get().shutdown();
+				
+				// Wait 200ms to ensure events have time to be sent
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					logger.warn("Interrupted while waiting for shutdown events to be sent", e);
+				}
+			} catch (Exception e) {
+				logger.error("Error shutting down debugger state", e);
+			}
+			
+			// Use the new clean WebSocket server shutdown method
+			try {
+				WebSocketServer.stopServer();
+			} catch (Exception e) {
+				logger.error("Error stopping WebSocket server", e);
+			}
+		});
+		
 		ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new FunctionPathGetter());
 
 		// Initialize breakpoint command system

@@ -1,7 +1,6 @@
 package top.mcfpp.mod.debugger.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
-import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import net.minecraft.command.CommandExecutionContext;
 import net.minecraft.command.CommandFunctionAction;
 import net.minecraft.command.Frame;
