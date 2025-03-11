@@ -4,20 +4,32 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import net.minecraft.nbt.NbtElement;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Pair;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Provides command suggestions for breakpoint-related commands.
+ * This class helps users by suggesting available variable names and keys
+ * when using the breakpoint get command.
+ */
 public class BreakpointSuggestionProvider implements SuggestionProvider<ServerCommandSource>{
 
+    /** Singleton instance of the suggestion provider */
     public static final BreakpointSuggestionProvider INSTANCE = new BreakpointSuggestionProvider();
 
+    /**
+     * Private constructor to enforce singleton pattern.
+     */
     private BreakpointSuggestionProvider() {}
 
+    /**
+     * Generates suggestions for available keys in the current debug context.
+     * @param c The command context
+     * @param builder The suggestions builder
+     * @return A future containing the generated suggestions
+     */
     @Override
     public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> c, SuggestionsBuilder builder) {
         var context = BreakPointCommand.storedCommandExecutionContext.peekFirst();

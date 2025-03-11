@@ -26,11 +26,14 @@ public class FixCommandActionMixin<T extends AbstractServerCommandSource<T>> {
 
     @Inject(method = "execute(Lnet/minecraft/server/command/AbstractServerCommandSource;Lnet/minecraft/command/CommandExecutionContext;Lnet/minecraft/command/Frame;)V", at = @At("HEAD"))
     private void execute(T abstractServerCommandSource, CommandExecutionContext<T> commandExecutionContext, Frame frame, CallbackInfo ci) {
-        if(frame.depth() == 0) return;
+        if(frame.depth() == 0)
+            return;
+        // If we are in debug mode, we execute as many commands as determined by the moveSteps variable, except if we found a breakpoint before
         if(BreakPointCommand.isDebugging){
             if(BreakPointCommand.moveSteps > 0) BreakPointCommand.moveSteps --;
             if(this.command.startsWith("breakpoint")) return;
-            if(abstractServerCommandSource instanceof ServerCommandSource serverCommandSource){
+            if(abstractServerCommandSource instanceof ServerCommandSource serverCommandSource) {
+                // We send to each player the executing command
                 var players = serverCommandSource.getServer().getPlayerManager().getPlayerList();
                 for(var player : players){
                     player.sendMessage(Text.translatable("commands.breakpoint.run", this.command));

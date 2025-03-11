@@ -31,6 +31,12 @@ loom {
 }
 
 dependencies {
+	implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j:0.24.0'
+	implementation 'org.eclipse.lsp4j:org.eclipse.lsp4j.debug:0.24.0'
+	implementation 'jakarta.websocket:jakarta.websocket-api:2.2.0'
+	implementation 'org.glassfish.tyrus:tyrus-server:2.2.0'
+	implementation 'org.glassfish.tyrus:tyrus-container-grizzly-server:2.2.0'
+
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
@@ -38,6 +44,7 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-key-binding-api-v1:${project.fabric_version}"
 }
 
 processResources {
@@ -57,7 +64,6 @@ java {
 	// if it is present.
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
-
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21
 }

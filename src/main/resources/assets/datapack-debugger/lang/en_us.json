@@ -10,5 +10,7 @@
   "commands.breakpoint.step.over": "Current tick has finished, exiting breakpoint mode",
   "commands.breakpoint.run": "Executing: %s",
   "commands.breakpoint.on": "Breakpoint is now active",
-  "commands.breakpoint.off": "Breakpoint is now inactive"
+  "commands.breakpoint.off": "Breakpoint is now inactive",
+  "net.gunivers.step": "Step into",
+  "net.gunivers.datapack_debugger": "Datapack Debugger"
 }
