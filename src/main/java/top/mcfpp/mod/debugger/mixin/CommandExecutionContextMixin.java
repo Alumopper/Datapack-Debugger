@@ -1,13 +1,11 @@
 package top.mcfpp.mod.debugger.mixin;
 
-import com.google.common.collect.Queues;
 import net.minecraft.command.*;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.ExpandedMacro;
 import net.minecraft.server.function.Procedure;
-import net.minecraft.server.function.Tracer;
 import net.minecraft.util.Pair;
 import net.minecraft.util.profiler.Profiler;
 import org.jetbrains.annotations.NotNull;
@@ -20,8 +18,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import top.mcfpp.mod.debugger.EncapsulationBreaker;
-import top.mcfpp.mod.debugger.command.FunctionInAction;
 import top.mcfpp.mod.debugger.dap.DebuggerState;
+import top.mcfpp.mod.debugger.dap.ScopeManager;
 
 import java.lang.reflect.Field;
 import java.util.Deque;
@@ -43,17 +41,10 @@ import static top.mcfpp.mod.debugger.command.BreakPointCommand.*;
 @Mixin(CommandExecutionContext.class)
 abstract public class CommandExecutionContextMixin<T> {
 
-    /** Queue for storing command entries during debugging */
-    @Unique
-    private final Deque<CommandQueueEntry<T>> storedCommandQueue = Queues.newArrayDeque();
-
     // Shadowed fields from the original class
-    @Shadow @Final private static int MAX_COMMAND_QUEUE_LENGTH;
     @Shadow @Final private static Logger LOGGER;
     @Shadow @Final private int maxCommandChainLength;
-    @Shadow @Final private int forkLimit;
     @Shadow @Final private Profiler profiler;
-    @Shadow private Tracer tracer;
     @Shadow private int commandsRemaining;
     @Shadow private boolean queueOverflowed;
     @Shadow @Final private Deque<CommandQueueEntry<T>> commandQueue;
@@ -289,23 +280,20 @@ abstract public class CommandExecutionContextMixin<T> {
         if (!(commandQueueEntry.action() instanceof SteppedCommandAction<?, ?> steppedAction)) {
             return false;
         }
-        
+
         var index = (int) EncapsulationBreaker.getAttribute(steppedAction, "nextActionIndex").get();
         if(index < 0) {
             return false;
         }
         
         var lineOpt = (Optional<?>) EncapsulationBreaker.getAttribute(function.entries().get(index), "sourceLine");
-        if (!lineOpt.isPresent()) {
-            if(function.entries().get(index) instanceof FunctionInAction<?> functionInAction) {
-                functionInAction.setCallerContext(DebuggerState.get().getCurrentFile(), DebuggerState.get().getCurrentLine());
-            }
+        if (lineOpt.isEmpty()) {
             return false;
         }
         
         var line = (int) lineOpt.get();
         boolean isDapBreakpoint = DebuggerState.get().mustStop(funcId.toString(), line);
-        DebuggerState.get().setCurrentLine(funcId.toString(), line);
+        ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line));
         
         if (isDapBreakpoint) {
             DebuggerState.get().triggerBreakpoint(DebuggerState.get().getServer().getCommandSource());
@@ -344,10 +332,8 @@ abstract public class CommandExecutionContextMixin<T> {
         var lineOpt = (Optional<?>) EncapsulationBreaker.getAttribute(function.entries().get(index), "sourceLine");
         if (lineOpt.isPresent()) {
             var line = (int) lineOpt.get();
-            DebuggerState.get().setCurrentLine(funcId.toString(), line);
+            ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line));
             DebuggerState.get().stop("step");
-        } else if(function.entries().get(index) instanceof FunctionInAction<?> functionInAction) {
-            functionInAction.setCallerContext(DebuggerState.get().getCurrentFile(), DebuggerState.get().getCurrentLine());
         }
     }
 
@@ -382,18 +368,14 @@ abstract public class CommandExecutionContextMixin<T> {
         var frame = commandQueueEntry.frame();
         try {
             // Use EncapsulationBreaker instead of reflection
-            var function = EncapsulationBreaker.getAttribute(frame, "function")
-                    .map(obj -> (ExpandedMacro<T>) obj)
-                    .orElse(null);
+            var function = (ExpandedMacro<T>) EncapsulationBreaker.getAttribute(frame, "function").orElse(null);
             
             if (function == null) {
                 return null;
             }
 
             // Get the arguments using EncapsulationBreaker
-            var args = EncapsulationBreaker.getAttribute(function, "arguments")
-                    .map(obj -> (NbtCompound) obj)
-                    .orElse(null);
+            var args = (NbtCompound) EncapsulationBreaker.getAttribute(function, "arguments").orElse(null);
 
             return new Pair<>(function, args);
         } catch (Exception e) {

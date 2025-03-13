@@ -5,11 +5,11 @@ import net.minecraft.server.command.ServerCommandSource;
 import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,15 +21,14 @@ import static top.mcfpp.mod.debugger.command.BreakPointCommand.isDebugging;
  */
 public class DebuggerState {
 
-    private static final Logger LOGGER = Logger.getLogger(DebuggerState.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger("datapack-debugger");
     
     // Pattern to extract namespace and path from a datapack function file path
     private static final Pattern PATH_PATTERN = Pattern.compile("data/(?<namespace>\\w+)/function/(?<path>.+)\\.mcfunction");
     
     // Event reasons
     private static final String BREAKPOINT_REASON = "breakpoint";
-    private static final String DISCONNECT_REASON = "disconnect";
-    
+
     // Default values
     public static final int DEFAULT_THREAD_ID = 1;
     
@@ -37,9 +36,8 @@ public class DebuggerState {
     private static volatile DebuggerState singleton;
 
     // Current execution state
-    private String currentFile;
-    private int currentLine;
     private MinecraftServer server;
+    private final ScopeManager scopeManager = ScopeManager.get();
     
     // Event handlers
     private final List<BiConsumer<Integer, String>> stopConsumers = new LinkedList<>();
@@ -60,7 +58,7 @@ public class DebuggerState {
      * Private constructor to enforce singleton pattern.
      */
     private DebuggerState() {
-        LOGGER.fine("DebuggerState instance created");
+        LOGGER.debug("DebuggerState instance created");
     }
 
     /**
@@ -130,7 +128,7 @@ public class DebuggerState {
          */
         public Optional<Integer> addBreakpoint(String filePath, int line) {
             if (filePath == null) {
-                LOGGER.warning("Attempted to add breakpoint with null file path");
+                LOGGER.warn("Attempted to add breakpoint with null file path");
                 return Optional.empty();
             }
             
@@ -143,11 +141,11 @@ public class DebuggerState {
                 int uuid = breakpointNextId++;
                 funBreakpoints.breakpoints.put(line, new Breakpoint(uuid, line));
                 
-                LOGGER.fine(() -> "Added breakpoint " + uuid + " at " + mcpath + ":" + line);
+                LOGGER.debug("Added breakpoint " + uuid + " at " + mcpath + ":" + line);
                 return Optional.of(uuid);
             }
             
-            LOGGER.warning("Failed to add breakpoint at " + filePath + ":" + line + " - Could not convert to MC path");
+            LOGGER.warn("Failed to add breakpoint at " + filePath + ":" + line + " - Could not convert to MC path");
             return Optional.empty();
         }
 
@@ -158,13 +156,13 @@ public class DebuggerState {
          */
         public void clearBreakpoints(String filePath) {
             if (filePath == null) {
-                LOGGER.warning("Attempted to clear breakpoints with null file path");
+                LOGGER.warn("Attempted to clear breakpoints with null file path");
                 return;
             }
             
             fileToMcPath(filePath).ifPresent(mcpath -> {
                 breakpoints.remove(mcpath);
-                LOGGER.fine(() -> "Cleared all breakpoints for " + mcpath);
+                LOGGER.debug("Cleared all breakpoints for " + mcpath);
             });
         }
 
@@ -232,19 +230,9 @@ public class DebuggerState {
      * @return true if the location is the current position, false otherwise
      */
     private boolean isAtCurrentPosition(String file, int line) {
-        return file.equals(currentFile) && line == currentLine;
-    }
-
-    /**
-     * Sets the current execution position.
-     *
-     * @param file The Minecraft path of the function
-     * @param line The line number (0-indexed)
-     */
-    public void setCurrentLine(String file, int line) {
-        this.currentFile = file;
-        this.currentLine = line;
-        LOGGER.fine(() -> "Current execution position set to " + file + ":" + line);
+        var functionName = this.scopeManager.getCurrentScope().map(ScopeManager.DebugScope::getFunction).orElse("");
+        var functionLine = this.scopeManager.getCurrentScope().map(ScopeManager.DebugScope::getLine).orElse(-1);
+        return file.equals(functionName) && line == functionLine;
     }
 
     /**
@@ -265,7 +253,7 @@ public class DebuggerState {
      */
     public void setServer(@Nullable MinecraftServer server) {
         this.server = server;
-        LOGGER.fine("Server reference set");
+        LOGGER.debug("Server reference set");
         
         // If we're replacing a server, make sure to clean up the old one
         if (server == null) {
@@ -281,7 +269,7 @@ public class DebuggerState {
      */
     public @NotNull MinecraftServer getServer() {
         if (server == null) {
-            LOGGER.severe("Attempted to get server when it was not set");
+            LOGGER.error("Attempted to get server when it was not set");
             throw new IllegalStateException("Server not set");
         }
         return server;
@@ -313,10 +301,10 @@ public class DebuggerState {
             
             // Set debugging flag
             isDebugging = true;
-            
-            LOGGER.fine(() -> "Breakpoint triggered at " + currentFile + ":" + currentLine);
+
+            LOGGER.debug("Breakpoint triggered at {}:{}", this.scopeManager.getCurrentScope().get().getFunction(), this.scopeManager.getCurrentScope().get().getLine());
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error triggering breakpoint", e);
+            LOGGER.error("Error triggering breakpoint", e);
         }
     }
     
@@ -324,12 +312,14 @@ public class DebuggerState {
      * Notifies all stop consumers about a breakpoint at the current position.
      */
     private void notifyStopConsumersForCurrentPosition() {
-        int breakpointId = breakpoints.getBreakpointId(currentFile, currentLine).orElse(-1);
+        var functionName = this.scopeManager.getCurrentScope().map(ScopeManager.DebugScope::getFunction).orElse("");
+        var functionLine = this.scopeManager.getCurrentScope().map(ScopeManager.DebugScope::getLine).orElse(-1);
+        int breakpointId = breakpoints.getBreakpointId(functionName, functionLine).orElse(-1);
         for (BiConsumer<Integer, String> consumer : stopConsumers) {
             try {
                 consumer.accept(breakpointId, BREAKPOINT_REASON);
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Error notifying stop consumer", e);
+                LOGGER.warn("Error notifying stop consumer", e);
             }
         }
     }
@@ -346,11 +336,11 @@ public class DebuggerState {
             try {
                 consumer.accept(-1, stopReason);
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Error in stop consumer", e);
+                LOGGER.warn("Error in stop consumer", e);
             }
         });
-        
-        LOGGER.fine(() -> "Execution stopped: " + stopReason);
+
+        LOGGER.debug("Execution stopped: {}", stopReason);
     }
 
     /**
@@ -362,11 +352,11 @@ public class DebuggerState {
             try {
                 runnable.run();
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Error in continue handler", e);
+                LOGGER.warn("Error in continue handler", e);
             }
         });
         
-        LOGGER.fine("Execution continued");
+        LOGGER.debug("Execution continued");
     }
 
     /**
@@ -398,24 +388,6 @@ public class DebuggerState {
         if (runnable != null) {
             this.continueRunnable.add(runnable);
         }
-    }
-
-    /**
-     * Gets the Minecraft path of the current function.
-     *
-     * @return The Minecraft path
-     */
-    public String getCurrentFile() {
-        return currentFile;
-    }
-
-    /**
-     * Gets the current line number (0-indexed).
-     *
-     * @return The line number
-     */
-    public int getCurrentLine() {
-        return currentLine;
     }
 
     /**
@@ -490,7 +462,7 @@ public class DebuggerState {
                 try {
                     handler.run();
                 } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, "Error in shutdown handler", e);
+                    LOGGER.warn("Error in shutdown handler", e);
                 }
             }
             
@@ -499,13 +471,14 @@ public class DebuggerState {
             stopConsumers.clear();
             continueRunnable.clear();
             shutdownHandlers.clear();
+            this.scopeManager.clear();
             
             // Reset state
             isShutdown = true;
             
             LOGGER.info("Debugger state shutdown complete");
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error during debugger shutdown", e);
+            LOGGER.error("Error during debugger shutdown", e);
         }
     }
     
@@ -527,8 +500,7 @@ public class DebuggerState {
         shutdownHandlers.clear();
         
         // Reset position information
-        currentFile = null;
-        currentLine = 0;
+        this.scopeManager.clear();
         
         LOGGER.info("Debugger state reset complete");
     }

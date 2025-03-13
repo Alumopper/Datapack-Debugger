@@ -17,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import top.mcfpp.mod.debugger.DatapackDebugger;
 import top.mcfpp.mod.debugger.dap.DebuggerState;
+import top.mcfpp.mod.debugger.dap.ScopeManager;
 
 import java.util.Deque;
 
@@ -135,9 +136,9 @@ public class BreakPointCommand {
                     .then(literal("stack")
                             .executes(context -> {
                                 MutableText text = Text.empty();
-                                var stacks = FunctionStackManager.getStack();
-                                for (FunctionStackManager.DebugFrame stack : stacks) {
-                                    var t = Text.literal(stack.name());
+                                var stacks = ScopeManager.get().getDebugScopes();
+                                for (var stack : stacks) {
+                                    var t = Text.literal(stack.getFunction());
                                     var style = t.getStyle();
                                     if(stacks.indexOf(stack) == 0){
                                         style = style.withBold(true);
@@ -154,7 +155,7 @@ public class BreakPointCommand {
                             })
                     )
                     .then(literal("run")
-                            .redirect(dispatcher.getRoot(), context -> (ServerCommandSource) FunctionStackManager.source.peek())
+                            .redirect(dispatcher.getRoot(), context -> (ServerCommandSource) ScopeManager.get().getCurrentScope().map(ScopeManager.DebugScope::getExecutor).orElse(null))
                     )
                     .then(literal("clear")
                             .executes(context -> {
@@ -192,8 +193,6 @@ public class BreakPointCommand {
         isStepOver = false;
         stepOverDepth = -1;
         storedCommandExecutionContext.clear();
-        FunctionStackManager.functionStack.clear();
-        FunctionStackManager.source.clear();
     }
 
     /**

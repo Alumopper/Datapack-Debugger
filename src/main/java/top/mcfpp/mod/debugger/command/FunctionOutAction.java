@@ -6,6 +6,7 @@ import net.minecraft.command.SourcedCommandAction;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import top.mcfpp.mod.debugger.dap.DebuggerState;
+import top.mcfpp.mod.debugger.dap.ScopeManager;
 
 /**
  * Action handler for when a function is exited during debugging.
@@ -37,7 +38,6 @@ public class FunctionOutAction<T extends AbstractServerCommandSource<T>> impleme
      */
     @Override
     public void execute(T source, CommandExecutionContext<T> context, Frame frame){
-        FunctionStackManager.pop();
-        DebuggerState.get().setCurrentLine(null, -1);
+        ScopeManager.get().unscope();
     }
 }

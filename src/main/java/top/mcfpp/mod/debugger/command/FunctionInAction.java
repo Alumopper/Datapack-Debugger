@@ -5,6 +5,8 @@ import net.minecraft.command.Frame;
 import net.minecraft.command.SourcedCommandAction;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
+import top.mcfpp.mod.debugger.dap.DebuggerState;
+import top.mcfpp.mod.debugger.dap.ScopeManager;
 
 /**
  * Action handler for when a function is entered during debugging.
@@ -17,9 +19,6 @@ public class FunctionInAction<T extends AbstractServerCommandSource<T>> implemen
 
     /** The function being entered */
     CommandFunction<T> function;
-
-    private String parentFunction;
-    private int callLineInParent;
 
     /**
      * Creates a new function entry action handler.
@@ -39,12 +38,6 @@ public class FunctionInAction<T extends AbstractServerCommandSource<T>> implemen
      */
     @Override
     public void execute(T source, CommandExecutionContext<T> context, Frame frame){
-        FunctionStackManager.source.push(source);
-        FunctionStackManager.push(function.id().toString(), this.parentFunction, this.callLineInParent, source);
-    }
-
-    public void setCallerContext(String caller, int line) {
-        this.callLineInParent = line;
-        this.parentFunction = caller;
+        ScopeManager.get().newScope(function.id().toString(), source);
     }
 }

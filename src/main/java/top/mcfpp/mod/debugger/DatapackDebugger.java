@@ -13,6 +13,9 @@ import top.mcfpp.mod.debugger.config.DebuggerConfig;
 import top.mcfpp.mod.debugger.dap.DebuggerState;
 import top.mcfpp.mod.debugger.dap.WebSocketServer;
 
+import java.io.InputStream;
+import java.util.logging.LogManager;
+
 /**
  * Main class of the Datapack Debugger mod.
  * This mod provides debugging capabilities for Minecraft datapacks by adding breakpoints
@@ -29,6 +32,19 @@ public class DatapackDebugger implements ModInitializer {
 	 */
 	@Override
 	public void onInitialize() {
+		// Configure Java logging to reduce Tyrus logs
+		try {
+			final InputStream inputStream = DatapackDebugger.class.getResourceAsStream("/logging.properties");
+			if (inputStream != null) {
+				LogManager.getLogManager().readConfiguration(inputStream);
+				logger.info("Successfully configured Java logging from properties file");
+			} else {
+				logger.warn("Could not find logging.properties file");
+			}
+		} catch (Exception e) {
+			logger.error("Failed to configure Java logging", e);
+		}
+		
 		// Load configuration
 		DebuggerConfig.getInstance();
 		logger.info("Datapack Debugger configured to run on localhost:{}/{}",

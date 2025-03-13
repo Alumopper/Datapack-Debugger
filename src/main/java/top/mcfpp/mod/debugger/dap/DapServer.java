@@ -7,13 +7,12 @@ import org.eclipse.lsp4j.debug.*;
 import org.eclipse.lsp4j.debug.Thread;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import top.mcfpp.mod.debugger.command.BreakPointCommand;
-import top.mcfpp.mod.debugger.command.FunctionStackManager;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * A DAP (Debug Adapter Protocol) server implementation using LSP4J.
@@ -21,30 +20,32 @@ import java.util.logging.Logger;
  */
 public class DapServer implements IDebugProtocolServer {
 
-    private static final Logger LOGGER = Logger.getLogger(DapServer.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger("datapack-debugger");
     private static final String MESSAGE_PREFIX = "[Datapack Debugger]";
-    
+
     // Constants for messages
     private static final String ATTACHED_MESSAGE = " Attached to VSCode!";
     private static final String DISCONNECTED_MESSAGE = " Disconnected from VSCode.";
     private static final String BREAKPOINT_DESCRIPTION = "Breakpoint reached";
     private static final String MAIN_THREAD_NAME = "Main Thread";
-    
+
     // Default values for stack trace parameters
     private static final int DEFAULT_START_FRAME = 0;
     private static final int DEFAULT_MAX_LEVELS = 1000;
     private static final int DEFAULT_EXIT_CODE = 0;
-    
+
+    private final DebuggerState debuggerState = DebuggerState.get();
+    private final ScopeManager scopeManager = ScopeManager.get();
     private IDebugProtocolClient client;
 
     /**
      * Creates a new DAP server instance.
      */
     public DapServer() {
-        LOGGER.fine("DapServer instance created");
-        
+        LOGGER.debug("DapServer instance created");
+
         // Register for shutdown notification
-        DebuggerState.get().onShutdown(this::exit);
+        debuggerState.onShutdown(this::exit);
     }
 
     // ===== Lifecycle Methods =====
@@ -55,23 +56,23 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
-        LOGGER.fine(() -> "DEBUG: Initialize request received with arguments: " + args);
-        
+        LOGGER.debug("Initialize request received with arguments: {}", args);
+
         Capabilities capabilities = new Capabilities();
         capabilities.setSupportsConfigurationDoneRequest(true);
         // capabilities.setSupportsBreakpointLocationsRequest(true);
-        
+
         // Register event handlers
-        DebuggerState.get().onStop(this::onStop);
-        DebuggerState.get().onContinue(this::onContinue);
-        
-        LOGGER.fine(() -> "DEBUG: Sending capabilities response: " + capabilities);
+        debuggerState.onStop(this::onStop);
+        debuggerState.onContinue(this::onContinue);
+
+        LOGGER.debug("Sending capabilities response: {}", capabilities);
         return CompletableFuture.completedFuture(capabilities).thenApply(capabilities1 -> {
-            LOGGER.fine(() -> "DEBUG: Sending initialized event");
+            LOGGER.debug("Sending initialized event");
             if (client != null) {
                 client.initialized();
             } else {
-                LOGGER.warning("Client is null during initialize, couldn't send initialized event");
+                LOGGER.warn("Client is null during initialize, couldn't send initialized event");
             }
             return capabilities1;
         });
@@ -83,7 +84,7 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<Void> launch(Map<String, Object> args) {
-        LOGGER.fine(() -> "DEBUG: Launch request received with arguments: " + args);
+        LOGGER.debug("Launch request received with arguments: {}", args);
         return CompletableFuture.completedFuture(null);
     }
 
@@ -93,8 +94,8 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<Void> attach(Map<String, Object> args) {
-        LOGGER.fine(() -> "DEBUG: Attach request received with arguments: " + args);
-        
+        LOGGER.debug("Attach request received with arguments: {}", args);
+
         sendMessageToAllPlayers(ATTACHED_MESSAGE);
         return CompletableFuture.completedFuture(null);
     }
@@ -105,8 +106,8 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<Void> disconnect(DisconnectArguments args) {
-        LOGGER.fine(() -> "DEBUG: Disconnect request received with arguments: " + args);
-        
+        LOGGER.debug("Disconnect request received with arguments: {}", args);
+
         sendMessageToAllPlayers(DISCONNECTED_MESSAGE);
         return CompletableFuture.completedFuture(null);
     }
@@ -117,7 +118,7 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<Void> configurationDone(ConfigurationDoneArguments args) {
-        LOGGER.fine(() -> "DEBUG: ConfigurationDone request received with arguments: " + args);
+        LOGGER.debug("ConfigurationDone request received with arguments: {}", args);
         return CompletableFuture.completedFuture(null);
     }
 
@@ -129,26 +130,26 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<SetBreakpointsResponse> setBreakpoints(SetBreakpointsArguments args) {
-        LOGGER.fine(() -> "DEBUG: SetBreakpoints request received with arguments: " + args);
-        
+        LOGGER.debug("SetBreakpoints request received with arguments: {}", args);
+
         if (args == null || args.getSource() == null || args.getSource().getPath() == null) {
-            LOGGER.warning("Received invalid SetBreakpoints request with null arguments");
+            LOGGER.warn("Received invalid SetBreakpoints request with null arguments");
             return CompletableFuture.completedFuture(new SetBreakpointsResponse());
         }
-        
+
         String path = args.getSource().getPath();
-        var state = DebuggerState.get();
+        var state = debuggerState;
         state.clearBreakpoints(path);
-        
+
         List<Breakpoint> breakpoints = new ArrayList<>(args.getBreakpoints().length);
         for(SourceBreakpoint sourceBreakpoint : args.getBreakpoints()) {
             breakpoints.add(createBreakpoint(path, sourceBreakpoint, state));
         }
-        
+
         SetBreakpointsResponse response = new SetBreakpointsResponse();
         response.setBreakpoints(breakpoints.toArray(Breakpoint[]::new));
-        
-        LOGGER.fine(() -> "DEBUG: Sending SetBreakpoints response: " + response);
+
+        LOGGER.debug("Sending SetBreakpoints response: {}", response);
         return CompletableFuture.completedFuture(response);
     }
 
@@ -158,16 +159,16 @@ public class DapServer implements IDebugProtocolServer {
     private Breakpoint createBreakpoint(String path, SourceBreakpoint sourceBreakpoint, DebuggerState state) {
         // Store the line as 0-indexed (convert from 1-indexed)
         var uuidOpt = state.registerBreakpoint(path, sourceBreakpoint.getLine() - 1);
-        
+
         var dapBreakpoint = new Breakpoint();
         dapBreakpoint.setLine(sourceBreakpoint.getLine());
         dapBreakpoint.setVerified(uuidOpt.isPresent());
         uuidOpt.ifPresent(dapBreakpoint::setId);
-        
+
         if(uuidOpt.isEmpty()) {
             dapBreakpoint.setReason(BreakpointNotVerifiedReason.FAILED);
         }
-        
+
         return dapBreakpoint;
     }
 
@@ -177,7 +178,7 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<SetInstructionBreakpointsResponse> setInstructionBreakpoints(SetInstructionBreakpointsArguments args) {
-        LOGGER.fine(() -> "DEBUG: SetInstructionBreakpoints request received with arguments: " + args);
+        LOGGER.debug("SetInstructionBreakpoints request received with arguments: {}", args);
         return CompletableFuture.completedFuture(null);
     }
 
@@ -187,7 +188,7 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<SetExceptionBreakpointsResponse> setExceptionBreakpoints(SetExceptionBreakpointsArguments args) {
-        LOGGER.fine(() -> "DEBUG: SetExceptionBreakpoints request received with arguments: " + args);
+        LOGGER.debug("SetExceptionBreakpoints request received with arguments: {}", args);
         return CompletableFuture.completedFuture(null);
     }
 
@@ -198,15 +199,15 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<Void> next(NextArguments args) {
-        LOGGER.fine(() -> "DEBUG: Next request received with arguments: " + args);
-        
+        LOGGER.debug("Next request received with arguments: {}", args);
+
         try {
             BreakPointCommand.isStepOver = true;
             BreakPointCommand.step(1, getCommandSource());
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error during step over execution", e);
+            LOGGER.warn("Error during step over execution", e);
         }
-        
+
         return CompletableFuture.completedFuture(null);
     }
 
@@ -215,14 +216,14 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<Void> stepIn(StepInArguments args) {
-        LOGGER.fine(() -> "DEBUG: StepIn request received with arguments: " + args);
-        
+        LOGGER.debug("StepIn request received with arguments: {}", args);
+
         try {
             BreakPointCommand.step(1, getCommandSource());
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error during step in execution", e);
+            LOGGER.warn("Error during step in execution", e);
         }
-        
+
         return CompletableFuture.completedFuture(null);
     }
 
@@ -231,17 +232,17 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<ContinueResponse> continue_(ContinueArguments args) {
-        LOGGER.fine(() -> "DEBUG: Continue request received with arguments: " + args);
-        
+        LOGGER.debug("Continue request received with arguments: {}", args);
+
         try {
             BreakPointCommand.continueExec(getCommandSource());
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error during continue execution", e);
+            LOGGER.warn( "Error during continue execution", e);
         }
-        
+
         var continueResponse = new ContinueResponse();
-        
-        LOGGER.fine(() -> "DEBUG: Sending Continue response: " + continueResponse);
+
+        LOGGER.debug("Sending Continue response: {}", continueResponse);
         return CompletableFuture.completedFuture(continueResponse);
     }
 
@@ -251,7 +252,7 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<Void> pause(PauseArguments args) {
-        LOGGER.fine(() -> "DEBUG: Pause request received with arguments: " + args);
+        LOGGER.debug("Pause request received with arguments: {}", args);
         return CompletableFuture.completedFuture(null);
     }
 
@@ -263,16 +264,16 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<ThreadsResponse> threads() {
-        LOGGER.fine(() -> "DEBUG: Threads request received");
-        
+        LOGGER.debug("Threads request received");
+
         Thread thread = new Thread();
-        thread.setId(DebuggerState.get().THREAD_ID);
+        thread.setId(debuggerState.THREAD_ID);
         thread.setName(MAIN_THREAD_NAME);
-        
+
         ThreadsResponse response = new ThreadsResponse();
         response.setThreads(new Thread[]{thread});
-        
-        LOGGER.fine(() -> "DEBUG: Sending Threads response: " + response);
+
+        LOGGER.debug("Sending Threads response: {}", response);
         return CompletableFuture.completedFuture(response);
     }
 
@@ -282,11 +283,11 @@ public class DapServer implements IDebugProtocolServer {
      */
     @Override
     public CompletableFuture<StackTraceResponse> stackTrace(StackTraceArguments args) {
-        LOGGER.fine(() -> "DEBUG: StackTrace request received with arguments: " + args);
-        
+        LOGGER.debug("StackTrace request received with arguments: {}", args);
+
         var startFrame = args.getStartFrame() != null ? args.getStartFrame() : DEFAULT_START_FRAME;
         var maxLevels = args.getLevels() != null ? args.getLevels() : DEFAULT_MAX_LEVELS;
-        var endFrame = Math.min(startFrame + maxLevels, FunctionStackManager.getStack().size());
+        var endFrame = Math.min(startFrame + maxLevels, ScopeManager.get().count());
 
         var frames = buildStackFrames(startFrame, endFrame);
         updateHeadFrame(frames);
@@ -294,86 +295,134 @@ public class DapServer implements IDebugProtocolServer {
         StackTraceResponse response = new StackTraceResponse();
         response.setStackFrames(frames.toArray(StackFrame[]::new));
         response.setTotalFrames(frames.size());
-        
-        LOGGER.fine(() -> "DEBUG: Sending StackTrace response: " + response);
+
+        LOGGER.debug("Sending StackTrace response: {}", response);
         return CompletableFuture.completedFuture(response);
     }
-    
+
     /**
      * Builds stack frames for the specified range of frames.
      */
     private List<StackFrame> buildStackFrames(int startFrame, int endFrame) {
         var frames = new ArrayList<StackFrame>(endFrame - startFrame);
-        
-        for(var frame: FunctionStackManager.getStack().subList(startFrame, endFrame)) {
+
+        for(var frame: this.scopeManager.getDebugScopes().subList(startFrame, endFrame)) {
             StackFrame stackFrame = createStackFrame(frame);
             frames.add(stackFrame);
         }
-        
+
         return frames;
     }
-    
+
     /**
-     * Creates a DAP StackFrame from a function stack frame.
+     * Creates a DAP StackFrame from a function stack scope.
      */
-    private StackFrame createStackFrame(FunctionStackManager.DebugFrame frame) {
+    private StackFrame createStackFrame(ScopeManager.DebugScope scope) {
         StackFrame stackFrame = new StackFrame();
-        stackFrame.setId(frame.id());
-        
+        stackFrame.setId(scope.getId());
+
         // Convert to 1-indexed
-        var index = frame.callLine() + 1;
-        stackFrame.setName(frame.name());
+        var index = scope.getCallerLine().orElse(-2) + 1;
+        stackFrame.setName(scope.getFunction());
         stackFrame.setLine(index);
-        
-        var source = createSource(frame);
+
+        var source = createSource(scope);
         stackFrame.setSource(source);
-        
+
         return stackFrame;
     }
-    
+
     /**
-     * Creates a DAP Source for a function stack frame.
+     * Creates a DAP Source for a function stack scope.
      */
-    private Source createSource(FunctionStackManager.DebugFrame frame) {
+    private Source createSource(ScopeManager.DebugScope scope) {
         var source = new Source();
-        
-        if(frame.source() instanceof ServerCommandSource serverSource) {
+
+        if(scope.getExecutor() instanceof ServerCommandSource serverSource) {
             source.setName(serverSource.getDisplayName().getString());
         }
-        
-        DebuggerState.get().getRealPath(frame.name()).ifPresent(path -> {
+
+        debuggerState.getRealPath(scope.getFunction()).ifPresent(path -> {
             source.setPath(path);
-            source.setName(frame.name());
+            source.setName(scope.getFunction());
         });
-        
+
         return source;
     }
-    
+
     /**
-     * Updates the head frame with current file and line information.
+     * Updates the head scope with current file and line information.
      */
     private void updateHeadFrame(List<StackFrame> frames) {
         if (!frames.isEmpty()) {
-            var headLine = DebuggerState.get().getCurrentLine() + 1;
-            frames.getFirst().setName(DebuggerState.get().getCurrentFile());
+            var headLine = scopeManager.getCurrentScope().map(ScopeManager.DebugScope::getLine).orElse(0) + 1;
+            frames.getFirst().setName(scopeManager.getCurrentScope().map(ScopeManager.DebugScope::getFunction).orElse(""));
             frames.getFirst().setLine(headLine);
         }
     }
 
     /**
-     * Provides variable scopes for a given stack frame.
+     * Provides variable scopes for a given stack scope.
      * Currently returns empty scopes.
      */
     @Override
     public CompletableFuture<ScopesResponse> scopes(ScopesArguments args) {
-        LOGGER.fine(() -> "DEBUG: Scopes request received with arguments: " + args);
-        
+        LOGGER.debug("Scopes request received with arguments: {}", args);
+
         var response = new ScopesResponse();
-        // var scope = new Scope();
-        // scope.setName("Locals");
-        response.setScopes(new Scope[]{});
-        
-        LOGGER.fine(() -> "DEBUG: Sending Scopes response: " + response);
+
+        var localScope = new Scope();
+        localScope.setName("Function");
+        localScope.setLine(0);
+        localScope.setPresentationHint("locals");
+
+        if(scopeManager.count() > 0) {
+            var scopeOpt = scopeManager.getScope(args.getFrameId());
+            if(scopeOpt.isPresent()) {
+                var scope = scopeOpt.get();
+                var rootVariable = scope.getRootVariables();
+                localScope.setSource(createSource(scope));
+                localScope.setNamedVariables(rootVariable.size());
+                localScope.setVariablesReference(scope.getId());
+            }
+        }
+
+        response.setScopes(new Scope[]{localScope});
+
+        LOGGER.debug("Sending Scopes response: {}", response);
+        return CompletableFuture.completedFuture(response);
+    }
+
+    @Override
+    public CompletableFuture<VariablesResponse> variables(VariablesArguments args) {
+        LOGGER.debug("Variables request received with arguments: {}", args);
+
+        var dapVariables = new LinkedList<Variable>();
+        var variableOpt = scopeManager.getVariables(args.getVariablesReference());
+        if(variableOpt.isPresent()) {
+            var variables = variableOpt.get();
+            var start = args.getStart() == null ? 0 : args.getStart();
+            var count = args.getCount() == null ? variables.size() : args.getCount();
+            var min = start >= 0 && start < variables.size() ? start : 0;
+            var max = Math.min(min + count, variables.size());
+            variables = variables.subList(min, max);
+
+            for(var variable: variables) {
+                var var = new Variable();
+                var.setName(variable.name());
+                var.setValue(variable.value());
+                var.setVariablesReference(!variable.children().isEmpty() ? variable.id() : 0);
+                var.setIndexedVariables(variable.children().size());
+                var display = new VariablePresentationHint();
+                display.setKind("data");
+                var.setPresentationHint(display);
+                dapVariables.add(var);
+            }
+        }
+
+        var response = new VariablesResponse();
+        response.setVariables(dapVariables.toArray(Variable[]::new));
+        LOGGER.debug("Sending Variables response: {}", response);
         return CompletableFuture.completedFuture(response);
     }
 
@@ -386,10 +435,10 @@ public class DapServer implements IDebugProtocolServer {
      * @throws IllegalArgumentException if client is null
      */
     public void setClient(IDebugProtocolClient client) {
-        LOGGER.fine(() -> "DEBUG: Setting client: " + client);
+        LOGGER.debug("Setting client: {}", client);
         
         if (client == null) {
-            LOGGER.warning("Attempt to set null client");
+            LOGGER.warn("Attempt to set null client");
             throw new IllegalArgumentException("Client cannot be null");
         }
         
@@ -401,23 +450,23 @@ public class DapServer implements IDebugProtocolServer {
      * Notifies the connected DAP client.
      */
     public void onStop(int breakpointId, String reason) {
-        LOGGER.fine(() -> "DEBUG: onStop called with breakpointId: " + breakpointId + ", reason: " + reason);
+        LOGGER.debug("onStop called with breakpointId: {}, reason: {}", breakpointId, reason);
         
         if (client == null) {
-            LOGGER.warning("Cannot send stopped event: client is null");
+            LOGGER.warn("Cannot send stopped event: client is null");
             return;
         }
         
         var stoppedEvent = new StoppedEventArguments();
         stoppedEvent.setReason(reason);
         stoppedEvent.setDescription(BREAKPOINT_DESCRIPTION);
-        stoppedEvent.setThreadId(DebuggerState.get().THREAD_ID);
+        stoppedEvent.setThreadId(debuggerState.THREAD_ID);
         
         if(breakpointId != -1) {
             stoppedEvent.setHitBreakpointIds(new Integer[]{breakpointId});
         }
-        
-        LOGGER.fine(() -> "DEBUG: Sending stopped event: " + stoppedEvent);
+
+        LOGGER.debug("Sending stopped event: {}", stoppedEvent);
         this.client.stopped(stoppedEvent);
     }
 
@@ -426,17 +475,17 @@ public class DapServer implements IDebugProtocolServer {
      * Notifies the connected DAP client.
      */
     public void onContinue() {
-        LOGGER.fine(() -> "DEBUG: onContinue called");
+        LOGGER.debug("onContinue called");
         
         if (client == null) {
-            LOGGER.warning("Cannot send continued event: client is null");
+            LOGGER.warn("Cannot send continued event: client is null");
             return;
         }
         
         var continuedEvent = new ContinuedEventArguments();
-        continuedEvent.setThreadId(DebuggerState.get().THREAD_ID);
-        
-        LOGGER.fine(() -> "DEBUG: Sending continued event: " + continuedEvent);
+        continuedEvent.setThreadId(debuggerState.THREAD_ID);
+
+        LOGGER.debug("Sending continued event: {}", continuedEvent);
         this.client.continued(continuedEvent);
     }
 
@@ -444,10 +493,10 @@ public class DapServer implements IDebugProtocolServer {
      * Notifies the client that the debugging session has ended.
      */
     public void exit() {
-        LOGGER.fine(() -> "DEBUG: exit called");
+        LOGGER.debug("exit called");
         
         if (client == null) {
-            LOGGER.warning("Cannot send exited event: client is null");
+            LOGGER.warn("Cannot send exited event: client is null");
             return;
         }
         
@@ -456,7 +505,7 @@ public class DapServer implements IDebugProtocolServer {
             sendTerminatedEvent();
             sendExitedEvent();
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error while sending exit events", e);
+            LOGGER.warn("Error while sending exit events", e);
         }
     }
     
@@ -467,10 +516,10 @@ public class DapServer implements IDebugProtocolServer {
     private void sendTerminatedEvent() {
         try {
             TerminatedEventArguments terminatedEvent = new TerminatedEventArguments();
-            LOGGER.fine(() -> "DEBUG: Sending terminated event: " + terminatedEvent);
+            LOGGER.debug("Sending terminated event: {}", terminatedEvent);
             client.terminated(terminatedEvent);
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to send terminated event", e);
+            LOGGER.warn("Failed to send terminated event", e);
         }
     }
     
@@ -482,11 +531,11 @@ public class DapServer implements IDebugProtocolServer {
         try {
             var exitedEvent = new ExitedEventArguments();
             exitedEvent.setExitCode(DEFAULT_EXIT_CODE);
-            
-            LOGGER.fine(() -> "DEBUG: Sending exited event: " + exitedEvent);
+
+            LOGGER.debug("Sending exited event: {}", exitedEvent);
             client.exited(exitedEvent);
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to send exited event", e);
+            LOGGER.warn("Failed to send exited event", e);
         }
     }
     
@@ -497,12 +546,12 @@ public class DapServer implements IDebugProtocolServer {
      */
     private void sendMessageToAllPlayers(String message) {
         try {
-            DebuggerState.get().getServer().getPlayerManager().getPlayerList().forEach(player -> {
+            debuggerState.getServer().getPlayerManager().getPlayerList().forEach(player -> {
                 var header = Text.literal(MESSAGE_PREFIX).formatted(Formatting.AQUA);
                 player.sendMessage(header.append(Text.literal(message).formatted(Formatting.WHITE)));
             });
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error sending message to players", e);
+            LOGGER.warn("Error sending message to players", e);
         }
     }
     
@@ -510,6 +559,6 @@ public class DapServer implements IDebugProtocolServer {
      * Gets the command source from the server.
      */
     private ServerCommandSource getCommandSource() {
-        return DebuggerState.get().getServer().getCommandSource();
+        return debuggerState.getServer().getCommandSource();
     }
 }
