@@ -1,0 +1,9 @@
+{
+	"required": true,
+	"package": "net.gunivers.sniffer.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": [],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

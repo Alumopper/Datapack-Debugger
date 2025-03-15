@@ -1,0 +1,16 @@
+{
+  "sniffer.commands.breakpoint.set": "已触发断点",
+  "sniffer.commands.breakpoint.get": "参数 %s 的值是 %s",
+  "sniffer.commands.breakpoint.get.fail": "无法获取参数 %s 的值",
+  "sniffer.commands.breakpoint.get.fail.error": "获取参数 %s 时发生未知错误: %s",
+  "sniffer.commands.breakpoint.get.fail.not_macro": "当前函数不是一个宏函数",
+  "sniffer.commands.breakpoint.move": "已恢复断点",
+  "sniffer.commands.breakpoint.move.not_debugging": "只能在断点调试状态下使用`move`命令",
+  "sniffer.commands.breakpoint.step.fail": "只能在断点调试状态下使用`step`命令",
+  "sniffer.commands.breakpoint.step.over": "当前刻执行完毕，已退出断点",
+  "sniffer.commands.breakpoint.run": "已执行：%s",
+  "sniffer.commands.breakpoint.on": "断点已激活",
+  "sniffer.commands.breakpoint.off": "断点已关闭",
+  "sniffer.step": "单步执行",
+  "sniffer.name": "数据包调试器"
+}

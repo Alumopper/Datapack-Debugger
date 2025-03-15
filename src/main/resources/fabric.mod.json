@@ -1,8 +1,8 @@
 {
 	"schemaVersion": 1,
-	"id": "datapack-debugger",
+	"id": "sniffer",
 	"version": "${version}",
-	"name": "Datapack Debugger",
+	"name": "Sniffer",
 	"description": "A mod that allows debugging datapacks with breakpoints.",
 	"authors": [
 		"Gunivers",
@@ -10,28 +10,28 @@
 		"Alumopper"
 	],
 	"contact": {
-		"homepage": "https://github.com/Gunivers/Datapack-Debugger",
-		"sources": "https://github.com/Gunivers/Datapack-Debugger",
-		"issues": "https://github.com/Gunivers/Datapack-Debugger/issues"
+		"homepage": "https://github.com/Gunivers/sniffer",
+		"sources": "https://github.com/Gunivers/sniffer",
+		"issues": "https://github.com/Gunivers/sniffer/issues"
 	},
 	"license": "MIT",
-	"icon": "assets/datapack-debugger/icon.png",
+	"icon": "assets/sniffer/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"top.mcfpp.mod.debugger.DatapackDebugger"
+          "net.gunivers.sniffer.DatapackDebugger"
 		],
 		"client": [
-			"top.mcfpp.mod.debugger.DatapackBreakpointClient"
+          "net.gunivers.sniffer.DatapackBreakpointClient"
 		],
 		"modmenu": [
-			"top.mcfpp.mod.debugger.config.ModMenuIntegration"
+          "net.gunivers.sniffer.config.ModMenuIntegration"
 		]
 	},
 	"mixins": [
-		"datapack-debugger.mixins.json",
+		"sniffer.mixins.json",
 		{
-			"config": "datapack-debugger.client.mixins.json",
+			"config": "sniffer.client.mixins.json",
 			"environment": "client"
 		}
 	],
@@ -45,5 +45,5 @@
 	"suggests": {
 		"modmenu": ">=13.0.2"
 	},
-	"accessWidener": "datapack-debugger.accesswidener"
+	"accessWidener": "sniffer.accesswidener"
 }

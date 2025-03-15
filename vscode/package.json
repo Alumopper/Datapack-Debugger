@@ -1,6 +1,6 @@
 {
-  "name": "datapack-debugger",
-  "displayName": "Datapack Debugger",
+  "name": "sniffer",
+  "displayName": "Sniffer",
   "version": "0.52.0",
   "publisher": "gunivers",
   "description": "Debug adapter for Minecraft datapacks.",
@@ -21,10 +21,10 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/mcbookshelf/datapack-debugger.git"
+    "url": "https://github.com/mcbookshelf/sniffer.git"
   },
   "bugs": {
-    "url": "https://github.com/mcbookshelf/datapack-debugger/issues"
+    "url": "https://github.com/mcbookshelf/sniffer/issues"
   },
   "scripts": {
     "compile": "tsc -p ./",
@@ -79,11 +79,11 @@
     ],
     "debuggers": [
       {
-        "type": "datapack-debugger",
+        "type": "sniffer",
         "languages": [
           "mcfunction"
         ],
-        "label": "Datapack Debugger",
+        "label": "Sniffer",
         "configurationAttributes": {
           "attach": {
             "required": [
@@ -104,7 +104,7 @@
         },
         "initialConfigurations": [
           {
-            "type": "datapack-debugger",
+            "type": "sniffer",
             "request": "attach",
             "name": "Connect to Minecraft",
             "address": "localhost:25599/dap",
@@ -115,10 +115,10 @@
         ],
         "configurationSnippets": [
           {
-            "label": "Datapack Debugger: Connect to Server",
+            "label": "Sniffer: Connect to Server",
             "description": "Connect to Minecraft.",
             "body": {
-              "type": "datapack-debugger",
+              "type": "sniffer",
               "request": "attach",
               "name": "Connect to Minecraft",
               "address": "localhost:25599/dap",
@@ -129,7 +129,7 @@
           }
         ],
         "variables": {
-          "AskForProgramName": "extension.datapack-debugger.getProgramName"
+          "AskForProgramName": "extension.sniffer.getProgramName"
         }
       }
     ]

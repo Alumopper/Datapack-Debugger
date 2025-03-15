@@ -4,7 +4,7 @@ import { SocketDebugSession } from './SocketDebugSession';
 export class SocketDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
     public async activate(context: vscode.ExtensionContext): Promise<void> {
         context.subscriptions.push(
-            vscode.debug.registerDebugAdapterDescriptorFactory('datapack-debugger', this)
+            vscode.debug.registerDebugAdapterDescriptorFactory('sniffer', this)
         );
     }
 

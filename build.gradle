@@ -26,7 +26,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"datapack-debugger" {
+		"sniffer" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
@@ -103,5 +103,5 @@ publishing {
 }
 
 loom {
-	accessWidenerPath = file("src/main/resources/datapack-debugger.accesswidener")
+	accessWidenerPath = file("src/main/resources/sniffer.accesswidener")
 }
