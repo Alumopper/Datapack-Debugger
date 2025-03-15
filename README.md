@@ -1,7 +1,5 @@
 # Sniffer
 
-![Sniffer Logo](vscode/images/mock-debug-icon.png)
-
 ## Overview
 
 Sniffer is a debug adapter for Minecraft datapacks that allows you to debug your `.mcfunction` files directly from Visual Studio Code. It provides features like breakpoints, step execution, and variable inspection to make datapack development easier and more efficient.
