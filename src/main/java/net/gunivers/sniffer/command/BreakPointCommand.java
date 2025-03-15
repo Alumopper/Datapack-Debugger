@@ -24,6 +24,9 @@ import java.util.Deque;
 /**
  * Main command handler for the datapack debugging system.
  * Provides commands for setting breakpoints, stepping through code, and inspecting variables.
+ *
+ * @author Alumopper
+ * @author theogiraudet
  */
 public class BreakPointCommand {
 

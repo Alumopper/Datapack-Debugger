@@ -38,6 +38,9 @@ import static net.gunivers.sniffer.command.BreakPointCommand.*;
  * - Handling function calls and returns
  *
  * @param <T> The type of command source being used
+ *
+ * @author Alumopper
+ * @author theogiraudet
  */
 @Mixin(CommandExecutionContext.class)
 abstract public class CommandExecutionContextMixin<T> {

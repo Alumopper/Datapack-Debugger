@@ -22,6 +22,8 @@ import java.util.HashSet;
  * WebSocket server implementation for the Debug Adapter Protocol.
  * This class handles the communication between the debugging client (IDE) and the Minecraft server,
  * allowing remote debugging of datapacks through a WebSocket connection.
+ *
+ * @author theogiraudet
  */
 public class WebSocketServer extends Endpoint {
 

@@ -20,6 +20,8 @@ import java.util.Map;
  * Manages variable conversion and representation for the debugger.
  * This class provides utility methods to convert Minecraft objects into debugger variables
  * that can be displayed in the debugging client.
+ *
+ * @author theogiraudet
  */
 public class VariableManager {
 

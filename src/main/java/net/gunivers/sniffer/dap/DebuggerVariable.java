@@ -12,6 +12,8 @@ import java.util.List;
  * @param children A list of child variables (for complex objects/structures)
  * @param isRoot Whether this variable is a root-level variable, i.e. a variable that must be displayed
  *               directly in the scope rather than as a child of another variable
+ *
+ * @author theogiraudet
  */
 public record DebuggerVariable(int id, String name, String value, List<DebuggerVariable> children, boolean isRoot) {
 }

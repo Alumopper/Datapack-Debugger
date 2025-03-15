@@ -20,6 +20,8 @@ import net.gunivers.sniffer.command.BreakPointCommand;
  * allowing the debugger to track and control command execution flow.
  *
  * @param <T> The type of command source being used
+ *
+ * @author Alumopper
  */
 @Mixin(FixedCommandAction.class)
 public class FixCommandActionMixin<T extends AbstractServerCommandSource<T>> {

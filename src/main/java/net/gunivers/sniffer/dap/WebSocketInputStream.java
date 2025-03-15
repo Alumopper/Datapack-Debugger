@@ -14,6 +14,8 @@ import java.util.concurrent.LinkedBlockingQueue;
  * <p>
  * The class blocks when no data is available and waits for messages
  * to arrive on the provided message queue.
+ *
+ * @author theogiraudet
  */
 public class WebSocketInputStream extends InputStream {
     /** Queue containing incoming WebSocket messages */

@@ -23,6 +23,9 @@ import java.util.List;
 import static net.minecraft.server.function.CommandFunction.validateCommandLength;
 import static net.minecraft.server.function.CommandFunction.parse;
 
+/**
+ * @author theogiraudet
+ */
 @Mixin(CommandFunction.class)
 public interface CommandFunctionMixin {
 

@@ -8,6 +8,10 @@ import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
 import net.gunivers.sniffer.command.BreakPointCommand;;
 
+/**
+ * @author Alumopper
+ * @author theogiraudet
+ */
 public class DatapackBreakpointClient implements ClientModInitializer {
 
 	private static KeyBinding stepInto;

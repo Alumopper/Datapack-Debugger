@@ -20,6 +20,9 @@ import java.util.List;
  * allowing the debugger to track macro execution in the same way as functions.
  *
  * @param <T> The type of command source being used
+ *
+ * @author Alumopper
+ * @author Wenz-jam
  */
 @Mixin(ExpandedMacro.class)
 public class ExpandedMacroMixin<T extends AbstractServerCommandSource<T>> {

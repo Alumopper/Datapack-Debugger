@@ -8,6 +8,8 @@ import net.minecraft.util.Identifier;
  * Resource loader that captures the ResourceManager instance during resource reload.
  * This class is used to obtain a reference to the server's ResourceManager
  * which is needed to access datapack function resources during debugging.
+ *
+ * @author Alumopper
  */
 public class FunctionPathGetter implements SimpleSynchronousResourceReloadListener {
 

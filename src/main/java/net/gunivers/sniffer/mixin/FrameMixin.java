@@ -9,6 +9,8 @@ import org.spongepowered.asm.mixin.Unique;
  * Mixin for the Frame class to add additional functionality for debugging.
  * This mixin adds the capability to track which function a frame is associated with,
  * which is necessary for proper function call tracing during debugging.
+ *
+ * @author Alumopper
  */
 @Mixin(Frame.class)
 public class FrameMixin {

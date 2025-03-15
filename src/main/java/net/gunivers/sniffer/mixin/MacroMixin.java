@@ -21,6 +21,8 @@ import java.util.List;
  * allowing the debugger to display macro parameter values during debugging.
  *
  * @param <T> The type of command source being used
+ *
+ * @author Alumopper
  */
 @Mixin(Macro.class)
 public class MacroMixin<T extends AbstractServerCommandSource<T>> {

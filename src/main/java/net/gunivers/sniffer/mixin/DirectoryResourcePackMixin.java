@@ -23,6 +23,8 @@ import java.util.stream.Stream;
  * Mixin for the DirectoryResourcePack class to enhance resource discovery for debugging.
  * This mixin overwrites the findResources method to capture file paths for datapack functions,
  * allowing the debugger to map function identifiers to their actual file locations.
+ *
+ * @author theogiraudet
  */
 @Mixin(DirectoryResourcePack.class)
 public class DirectoryResourcePackMixin {

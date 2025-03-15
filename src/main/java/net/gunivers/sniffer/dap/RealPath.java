@@ -6,6 +6,8 @@ package net.gunivers.sniffer.dap;
  *
  * @param path The string representation of the path to the resource
  * @param kind The type of resource (e.g. ZIP archive)
+ *
+ * @author theogiraudet
  */
 public record RealPath(String path, Kind kind) {
     /**

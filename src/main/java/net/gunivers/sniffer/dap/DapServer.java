@@ -19,6 +19,8 @@ import java.util.concurrent.CompletableFuture;
 /**
  * A DAP (Debug Adapter Protocol) server implementation using LSP4J.
  * Provides debugging capabilities for Minecraft datapacks.
+ *
+ * @author theogiraudet
  */
 public class DapServer implements IDebugProtocolServer {
 

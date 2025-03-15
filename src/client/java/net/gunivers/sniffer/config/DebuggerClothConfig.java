@@ -11,6 +11,8 @@ import java.util.function.Supplier;
 /**
  * Cloth Config integration for the Sniffer mod.
  * Provides a GUI interface for configuring the debugger.
+ *
+ * @author theogiraudet
  */
 public class DebuggerClothConfig {
 

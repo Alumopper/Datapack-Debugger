@@ -7,6 +7,9 @@ import java.util.*;
 /**
  * Manages the loading and storage of function text content for debugging purposes.
  * This class maintains a mapping between function identifiers and their source code lines.
+ *
+ * @author XiLaiTL
+ *
  */
 public class FunctionTextLoader {
     /** Map storing function identifiers and their corresponding source code lines */

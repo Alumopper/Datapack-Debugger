@@ -20,6 +20,8 @@ import static net.gunivers.sniffer.command.BreakPointCommand.isDebugging;
 /**
  * Singleton class that maintains the state of the debugger.
  * Handles breakpoints, execution state, and debug events.
+ *
+ * @author theogiraudet
  */
 public class DebuggerState {
 

@@ -6,6 +6,8 @@ import org.spongepowered.asm.mixin.Unique;
 
 /**
  * Mixin to add source-file information to each command: the source function and the line
+ *
+ * @author theogiraudet
  */
 @Mixin(SingleCommandAction.Sourced.class)
 public class SingleCommandActionSourcedMixin {

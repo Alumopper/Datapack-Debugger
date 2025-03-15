@@ -13,6 +13,8 @@ import java.util.concurrent.CompletableFuture;
  * Provides command suggestions for breakpoint-related commands.
  * This class helps users by suggesting available variable names and keys
  * when using the breakpoint get command.
+ *
+ * @author Alumopper
  */
 public class BreakpointSuggestionProvider implements SuggestionProvider<ServerCommandSource>{
 

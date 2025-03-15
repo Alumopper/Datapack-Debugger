@@ -15,6 +15,8 @@ import java.nio.charset.StandardCharsets;
  * <p>
  * Data is accumulated in an internal buffer until flush() is called,
  * at which point it is converted to a string and sent as a WebSocket text message.
+ *
+ * @author theogiraudet
  */
 public class WebSocketOutputStream extends OutputStream {
     /** The WebSocket session to send messages to */

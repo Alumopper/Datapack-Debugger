@@ -25,6 +25,8 @@ import static net.gunivers.sniffer.EncapsulationBreaker.getAttribute;
  * Mixin for the ZipResourcePack class to provide debugging capabilities.
  * This mixin allows the debugger to access and track resources within ZIP-based datapacks,
  * which is essential for mapping function paths to their actual locations in the datapack.
+ *
+ * @author theogiraudet
  */
 @Mixin(ZipResourcePack.class)
 public class ZipResourcePackMixin {

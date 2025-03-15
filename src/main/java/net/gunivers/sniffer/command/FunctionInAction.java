@@ -13,6 +13,9 @@ import net.gunivers.sniffer.dap.ScopeManager;
  * and its source to the stack when a function is called.
  *
  * @param <T> The type of command source being used
+ *
+ * @author Alumopper
+ * @author theogiraudet
  */
 public class FunctionInAction<T extends AbstractServerCommandSource<T>> implements SourcedCommandAction<T> {
 

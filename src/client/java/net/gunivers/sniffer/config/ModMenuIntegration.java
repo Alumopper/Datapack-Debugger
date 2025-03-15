@@ -7,6 +7,8 @@ import net.fabricmc.api.Environment;
 
 /**
  * Integration with ModMenu to provide a configuration screen for the Sniffer.
+ *
+ * @author theogiraudet
  */
 @Environment(EnvType.CLIENT)
 public class ModMenuIntegration implements ModMenuApi {

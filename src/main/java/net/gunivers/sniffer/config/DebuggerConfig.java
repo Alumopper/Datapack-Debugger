@@ -15,6 +15,8 @@ import java.nio.file.Path;
 /**
  * Configuration class for the Sniffer mod.
  * Handles loading and saving configuration settings.
+ *
+ * @author theogiraudet
  */
 public class DebuggerConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger("sniffer");

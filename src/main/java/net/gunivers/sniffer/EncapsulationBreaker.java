@@ -5,6 +5,8 @@ import java.util.Optional;
 
 /**
  * Utility class that provides methods to break encapsulation.
+ *
+ * @author theogiraudet
  */
 public class EncapsulationBreaker {
 

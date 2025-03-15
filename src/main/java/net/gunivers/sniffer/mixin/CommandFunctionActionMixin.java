@@ -21,6 +21,8 @@ import java.lang.reflect.Field;
  * which is necessary for proper call stack tracking during debugging.
  *
  * @param <T> The type of command source being used
+ *
+ * @author Alumopper
  */
 @Mixin(CommandFunctionAction.class)
 public class CommandFunctionActionMixin<T extends AbstractServerCommandSource<T>> {

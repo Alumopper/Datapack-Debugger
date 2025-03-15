@@ -21,6 +21,9 @@ import java.util.logging.LogManager;
  * Main class of the Sniffer mod.
  * This mod provides debugging capabilities for Minecraft datapacks by adding breakpoints
  * and debugging features to help developers debug their datapack functions.
+ *
+ * @author Alumopper
+ * @author theogiraudet
  */
 public class DatapackDebugger implements ModInitializer {
 	/** Main logger for the mod's logging system */

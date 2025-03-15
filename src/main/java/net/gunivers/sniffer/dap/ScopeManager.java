@@ -11,6 +11,8 @@ import java.util.*;
  * Manager for debug scopes in the debugger.
  * Handles scope lifecycle, variable access, and scope stacking during debugging.
  * Implemented as a singleton to ensure a single instance is used throughout the application.
+ *
+ * @author theogiraudet
  */
 public class ScopeManager {
 
