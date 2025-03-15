@@ -34,17 +34,20 @@ public class DapServer implements IDebugProtocolServer {
     private static final int DEFAULT_MAX_LEVELS = 1000;
     private static final int DEFAULT_EXIT_CODE = 0;
 
+    /** The main debugger state that tracks execution and breakpoints */
     private final DebuggerState debuggerState = DebuggerState.get();
+    /** Manager for variable scopes during debugging */
     private final ScopeManager scopeManager = ScopeManager.get();
+    /** The client connected to this debug server */
     private IDebugProtocolClient client;
 
     /**
-     * Creates a new DAP server instance.
+     * Creates a new DAP server instance and sets up the necessary event handlers.
+     * Registers callbacks for stop and continue events from the debugger state.
      */
     public DapServer() {
-        LOGGER.debug("DapServer instance created");
-
-        // Register for shutdown notification
+        debuggerState.onStop(this::onStop);
+        debuggerState.onContinue(this::onContinue);
         debuggerState.onShutdown(this::exit);
     }
 
@@ -321,10 +324,9 @@ public class DapServer implements IDebugProtocolServer {
         StackFrame stackFrame = new StackFrame();
         stackFrame.setId(scope.getId());
 
-        // Convert to 1-indexed
-        var index = scope.getCallerLine().orElse(-2) + 1;
         stackFrame.setName(scope.getFunction());
-        stackFrame.setLine(index);
+        // Convert to 1-indexed
+        stackFrame.setLine(scope.getLine() + 1);
 
         var source = createSource(scope);
         stackFrame.setSource(source);
@@ -338,14 +340,11 @@ public class DapServer implements IDebugProtocolServer {
     private Source createSource(ScopeManager.DebugScope scope) {
         var source = new Source();
 
-        if(scope.getExecutor() instanceof ServerCommandSource serverSource) {
-            source.setName(serverSource.getDisplayName().getString());
-        }
-
-        debuggerState.getRealPath(scope.getFunction()).ifPresent(path -> {
-            source.setPath(path);
+        scope.getPath().ifPresent(path -> {
+            source.setPath(path.path());
             source.setName(scope.getFunction());
-        });
+        }
+        );
 
         return source;
     }

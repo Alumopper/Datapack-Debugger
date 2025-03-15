@@ -39,5 +39,6 @@ public class FunctionOutAction<T extends AbstractServerCommandSource<T>> impleme
     @Override
     public void execute(T source, CommandExecutionContext<T> context, Frame frame){
         ScopeManager.get().unscope();
+        if(BreakPointCommand.moveSteps > 0 && frame.depth() > 1) BreakPointCommand.moveSteps --;
     }
 }

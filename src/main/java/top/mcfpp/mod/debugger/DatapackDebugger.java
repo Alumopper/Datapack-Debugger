@@ -11,6 +11,7 @@ import top.mcfpp.mod.debugger.command.BreakPointCommand;
 import top.mcfpp.mod.debugger.command.FunctionPathGetter;
 import top.mcfpp.mod.debugger.config.DebuggerConfig;
 import top.mcfpp.mod.debugger.dap.DebuggerState;
+import top.mcfpp.mod.debugger.dap.ScopeManager;
 import top.mcfpp.mod.debugger.dap.WebSocketServer;
 
 import java.io.InputStream;
@@ -61,6 +62,8 @@ public class DatapackDebugger implements ModInitializer {
 			// Set the server reference
 			DebuggerState.get().setServer(server);
 		});
+
+		ServerLifecycleEvents.START_DATA_PACK_RELOAD.register((server, a) -> ScopeManager.get().clearFunctionPaths());
 		
 		// Start WebSocket server for DAP communication using configured settings
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> WebSocketServer.launch().ifPresent(wss -> webSocketServer = wss));

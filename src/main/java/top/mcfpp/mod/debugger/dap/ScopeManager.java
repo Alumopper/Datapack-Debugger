@@ -2,7 +2,9 @@ package top.mcfpp.mod.debugger.dap;
 
 import net.minecraft.server.command.AbstractServerCommandSource;
 import org.jetbrains.annotations.Nullable;
+import net.minecraft.util.Identifier;
 
+import java.nio.file.Path;
 import java.util.*;
 
 /**
@@ -13,6 +15,7 @@ import java.util.*;
 public class ScopeManager {
 
     private static ScopeManager singleton;
+    private static final Map<String, RealPath> PATHS = new HashMap<>();
 
     /**
      * Private constructor for singleton pattern.
@@ -45,8 +48,9 @@ public class ScopeManager {
      */
     public static class DebugScope {
         private final String function;
+        private final RealPath path;
         private final AbstractServerCommandSource<?> executor;
-        private int line = -1;
+        private int line = -2;
         private final Map<Integer, DebuggerVariable> variables;
         private final int id = ID++;
         private final DebugScope parent;
@@ -55,21 +59,22 @@ public class ScopeManager {
          * Creates a new debug scope.
          * 
          * @param parent The parent scope, or null if this is the root scope
-         * @param currentFile The function/file path being executed
+         * @param function The function mcpath being executed
          * @param executor The command source executing the function
          */
-        protected DebugScope(@Nullable DebugScope parent, String currentFile, AbstractServerCommandSource<?> executor) {
+        protected DebugScope(@Nullable DebugScope parent, String function, AbstractServerCommandSource<?> executor) {
             this.parent = parent;
-            this.function = currentFile;
+            this.function = function;
+            this.path = PATHS.get(function);
             this.executor = executor;
             this.variables = VariableManager.convertCommandSource(executor, ID);
             ID += variables.size();
         }
 
         /**
-         * Gets the function path for this scope.
+         * Gets the function mcpath of this scope.
          * 
-         * @return The function path
+         * @return The function mcpath
          */
         public String getFunction() {
             return function;
@@ -146,6 +151,10 @@ public class ScopeManager {
         public void setLine(int currentLine) {
             this.line = currentLine;
         }
+
+        public Optional<RealPath> getPath() {
+            return Optional.ofNullable(path);
+        }
     }
 
     /** Stack of debug scopes representing the call hierarchy */
@@ -154,6 +163,28 @@ public class ScopeManager {
     private DebugScope currentScope = null;
     /** Set of known scope IDs for quick lookups */
     private final Set<Integer> scopeIds = new HashSet<>();
+
+    /**
+     * Saves the physical file path for a function identified by its Minecraft identifier.
+     * This mapping is essential for the debugger to locate the source files.
+     * 
+     * @param path The physical file path of the function
+     * @param id The Minecraft identifier for the function
+     */
+    public void savePath(Path path, Identifier id) {
+        var location = id.getNamespace() + ":" + id.getPath().substring("function/".length(), id.getPath().length() - ".mcfunction".length());
+        PATHS.putIfAbsent(location, new RealPath(path.toAbsolutePath().toString(), null));
+    }
+
+    /**
+     * Retrieves the physical file path for a function identified by its Minecraft path.
+     * 
+     * @param mcpath The Minecraft path of the function (format: namespace:path)
+     * @return An Optional containing the physical file path if found, or empty if no mapping exists
+     */
+    public Optional<String> getPath(String mcpath) {
+        return Optional.ofNullable(PATHS.get(mcpath)).map(RealPath::path);
+    }
 
     /**
      * Creates a new scope and pushes it onto the scope stack.
@@ -197,6 +228,14 @@ public class ScopeManager {
         this.debugScopeStack.clear();
         this.scopeIds.clear();
         ID = 1;
+    }
+
+    /**
+     * Clears the mapping between Minecraft function paths and physical file paths.
+     * This should be called when datapacks are reloaded to prevent stale mappings.
+     */
+    public void clearFunctionPaths() {
+        PATHS.clear();
     }
 
     /**
@@ -248,7 +287,7 @@ public class ScopeManager {
      * @return The list of all debug scopes
      */
     public List<DebugScope> getDebugScopes() {
-        return this.debugScopeStack;
+        return this.debugScopeStack.reversed();
     }
 
     /**

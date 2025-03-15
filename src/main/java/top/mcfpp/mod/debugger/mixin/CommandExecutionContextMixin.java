@@ -18,6 +18,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import top.mcfpp.mod.debugger.EncapsulationBreaker;
+import top.mcfpp.mod.debugger.command.BreakPointCommand;
+import top.mcfpp.mod.debugger.command.FunctionOutAction;
 import top.mcfpp.mod.debugger.dap.DebuggerState;
 import top.mcfpp.mod.debugger.dap.ScopeManager;
 
@@ -220,6 +222,18 @@ abstract public class CommandExecutionContextMixin<T> {
     }
 
     /**
+     * Executes a command entry and updates the current depth.
+     *
+     * @param commandQueueEntry The command entry to execute
+     * @param context The command execution context
+     */
+    @Unique
+    private void executeCommandEntry(CommandQueueEntry<T> commandQueueEntry, CommandExecutionContext<T> context) {
+        this.currentDepth = commandQueueEntry.frame().depth();
+        commandQueueEntry.execute(context);
+    }
+
+    /**
      * Resets step over state if needed.
      */
     @Unique
@@ -228,18 +242,6 @@ abstract public class CommandExecutionContextMixin<T> {
             isStepOver = false;
             stepOverDepth = -1;
         }
-    }
-
-    /**
-     * Executes a command entry and updates the current depth.
-     * 
-     * @param commandQueueEntry The command entry to execute
-     * @param context The command execution context
-     */
-    @Unique
-    private void executeCommandEntry(CommandQueueEntry<T> commandQueueEntry, CommandExecutionContext<T> context) {
-        this.currentDepth = commandQueueEntry.frame().depth();
-        commandQueueEntry.execute(context);
     }
 
     /**
@@ -269,28 +271,16 @@ abstract public class CommandExecutionContextMixin<T> {
         if(commandQueueEntry.frame().depth() <= 0) {
             return false;
         }
-        
-        var function = getExpandedMacroFromFrame(commandQueueEntry.frame());
-        if(function == null) {
-            return false;
-        }
-        
-        var funcId = function.id();
 
-        if (!(commandQueueEntry.action() instanceof SteppedCommandAction<?, ?> steppedAction)) {
-            return false;
-        }
+        var function = this.getNextCommand(commandQueueEntry);
 
-        var index = (int) EncapsulationBreaker.getAttribute(steppedAction, "nextActionIndex").get();
-        if(index < 0) {
-            return false;
-        }
-        
-        var lineOpt = (Optional<?>) EncapsulationBreaker.getAttribute(function.entries().get(index), "sourceLine");
+        var lineOpt = function.flatMap(fun -> EncapsulationBreaker.getAttribute(fun, "sourceLine"));
         if (lineOpt.isEmpty()) {
             return false;
         }
-        
+
+        var funcId = getExpandedMacroFromFrame(commandQueueEntry.frame()).id();
+
         var line = (int) lineOpt.get();
         boolean isDapBreakpoint = DebuggerState.get().mustStop(funcId.toString(), line);
         ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line));
@@ -313,28 +303,36 @@ abstract public class CommandExecutionContextMixin<T> {
             return;
         }
         
-        var function = getExpandedMacroFromFrame(commandQueueEntry.frame());
-        if(function == null) {
-            return;
-        }
-        
-        var funcId = function.id();
+        var nextCommand = this.getNextCommand(commandQueueEntry);
 
-        if (!(commandQueueEntry.action() instanceof SteppedCommandAction<?, ?> steppedAction)) {
-            return;
-        }
-        
-        var index = (int) EncapsulationBreaker.getAttribute(steppedAction, "nextActionIndex").get();
-        if(index < 0) {
-            return;
-        }
-        
-        var lineOpt = (Optional<?>) EncapsulationBreaker.getAttribute(function.entries().get(index), "sourceLine");
-        if (lineOpt.isPresent()) {
+        var lineOpt = nextCommand.flatMap(command -> EncapsulationBreaker.getAttribute(command, "sourceLine"));
+        if (lineOpt.isPresent() && !(nextCommand.get() instanceof FunctionOutAction<?>)) {
             var line = (int) lineOpt.get();
             ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line));
             DebuggerState.get().stop("step");
+        // If we find a FunctionOutAction, we increment the moveSteps variable to pass over it instead of stopping
+        } else if(nextCommand.isPresent() && nextCommand.get() instanceof FunctionOutAction<?>) {
+            moveSteps++;
         }
+    }
+
+    @Unique
+    private Optional<SourcedCommandAction<?>> getNextCommand(CommandQueueEntry<T> commandQueueEntry) {
+        var function = getExpandedMacroFromFrame(commandQueueEntry.frame());
+        if(function == null) {
+            return Optional.empty();
+        }
+
+        if (!(commandQueueEntry.action() instanceof SteppedCommandAction<?, ?> steppedAction)) {
+            return Optional.empty();
+        }
+
+        var index = (int) EncapsulationBreaker.getAttribute(steppedAction, "nextActionIndex").get();
+        if(index < 0) {
+            return Optional.empty();
+        }
+
+        return Optional.ofNullable(function.entries().get(index));
     }
 
     /**

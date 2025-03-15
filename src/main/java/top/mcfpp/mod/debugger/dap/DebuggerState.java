@@ -8,6 +8,8 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
@@ -21,37 +23,42 @@ import static top.mcfpp.mod.debugger.command.BreakPointCommand.isDebugging;
  */
 public class DebuggerState {
 
+    /** Logger for this class */
     private static final Logger LOGGER = LoggerFactory.getLogger("datapack-debugger");
     
-    // Pattern to extract namespace and path from a datapack function file path
+    /** Pattern to extract namespace and path from a datapack function mcpath path */
     private static final Pattern PATH_PATTERN = Pattern.compile("data/(?<namespace>\\w+)/function/(?<path>.+)\\.mcfunction");
     
-    // Event reasons
+    /** Standard reason string for breakpoint stop events */
     private static final String BREAKPOINT_REASON = "breakpoint";
 
-    // Default values
+    /** Default thread ID used for DAP communication */
     public static final int DEFAULT_THREAD_ID = 1;
     
-    // Thread-safe singleton instance with lazy initialization
+    /** Thread-safe singleton instance with lazy initialization */
     private static volatile DebuggerState singleton;
 
-    // Current execution state
+    /** Current Minecraft server instance */
     private MinecraftServer server;
+    /** Scope manager for tracking function call hierarchy */
     private final ScopeManager scopeManager = ScopeManager.get();
     
-    // Event handlers
+    /** Listeners for debugger stop events that receive breakpoint ID and reason */
     private final List<BiConsumer<Integer, String>> stopConsumers = new LinkedList<>();
+    /** Listeners for debugger continue events */
     private final List<Runnable> continueRunnable = new LinkedList<>();
+    /** Handlers to be called when the debugger is shutting down */
     private final List<Runnable> shutdownHandlers = new LinkedList<>();
     
-    // Breakpoint management
+    /** Container for all breakpoints in all functions */
     private final AllBreakpoints breakpoints = new AllBreakpoints();
+    /** Counter for generating unique breakpoint IDs */
     private int breakpointNextId = 0;
     
-    // Thread identifier for DAP communication
+    /** Thread identifier for DAP communication */
     public final int THREAD_ID = DEFAULT_THREAD_ID;
     
-    // Shutdown state
+    /** Flag indicating whether the debugger has been shut down */
     private boolean isShutdown = false;
 
     /**
@@ -117,53 +124,54 @@ public class DebuggerState {
      * Class to manage all breakpoints across different functions.
      */
     private class AllBreakpoints {
-        private final Map<String, FunctionBreakpoints> breakpoints = new HashMap<>();
+        private final Map<Path, FunctionBreakpoints> breakpoints = new HashMap<>();
 
         /**
-         * Adds a breakpoint to a file at the specified line.
+         * Adds a breakpoint to a mcpath at the specified line.
          *
-         * @param filePath The filesystem path to the file
+         * @param filePath The filesystem path to the mcpath
          * @param line The line number (0-indexed)
          * @return Optional containing the breakpoint ID if successful, empty otherwise
          */
         public Optional<Integer> addBreakpoint(String filePath, int line) {
             if (filePath == null) {
-                LOGGER.warn("Attempted to add breakpoint with null file path");
+                LOGGER.warn("Attempted to add breakpoint with null mcpath path");
                 return Optional.empty();
             }
+            // Sometimes on Windows we have a path like `c:\foo\bar`, this instruction enables the conversion to `C:\foo\bar`
+            filePath = Paths.get(filePath).toString();
             
             Optional<String> mcpathOpt = fileToMcPath(filePath);
             if (mcpathOpt.isPresent()) {
                 String mcpath = mcpathOpt.get();
-                var funBreakpoints = breakpoints.getOrDefault(mcpath, new FunctionBreakpoints(mcpath, filePath));
-                breakpoints.put(mcpath, funBreakpoints);
+                var funBreakpoints = breakpoints.getOrDefault(Path.of(filePath), new FunctionBreakpoints(mcpath, filePath));
+                breakpoints.put(Path.of(filePath), funBreakpoints);
                 
                 int uuid = breakpointNextId++;
                 funBreakpoints.breakpoints.put(line, new Breakpoint(uuid, line));
-                
-                LOGGER.debug("Added breakpoint " + uuid + " at " + mcpath + ":" + line);
+
+                LOGGER.debug("Added breakpoint {} at {}:{}", uuid, mcpath, line);
                 return Optional.of(uuid);
             }
-            
-            LOGGER.warn("Failed to add breakpoint at " + filePath + ":" + line + " - Could not convert to MC path");
+
+            LOGGER.warn("Failed to add breakpoint at {}:{} - Could not convert to MC path", filePath, line);
             return Optional.empty();
         }
 
         /**
-         * Clears all breakpoints for a file.
+         * Clears all breakpoints for a mcpath.
          *
-         * @param filePath The filesystem path to the file
+         * @param filePath The filesystem path to the mcpath
          */
         public void clearBreakpoints(String filePath) {
             if (filePath == null) {
-                LOGGER.warn("Attempted to clear breakpoints with null file path");
+                LOGGER.warn("Attempted to clear breakpoints with null mcpath path");
                 return;
             }
             
-            fileToMcPath(filePath).ifPresent(mcpath -> {
-                breakpoints.remove(mcpath);
-                LOGGER.debug("Cleared all breakpoints for " + mcpath);
-            });
+
+            breakpoints.remove(Path.of(filePath));
+            LOGGER.debug("Cleared all breakpoints for {}", filePath);
         }
 
         /**
@@ -177,8 +185,9 @@ public class DebuggerState {
             if (mcpath == null) {
                 return false;
             }
-            
-            return Optional.ofNullable(breakpoints.get(mcpath))
+
+            var path = scopeManager.getPath(mcpath);
+            return path.map(Path::of).map(breakpoints::get)
                     .map(funBreakpoints -> funBreakpoints.breakpoints.containsKey(line))
                     .orElse(false);
         }
@@ -186,16 +195,16 @@ public class DebuggerState {
         /**
          * Gets the ID of a breakpoint at the specified location.
          *
-         * @param filePath The Minecraft path of the function
+         * @param mcpath The Minecraft path of the function
          * @param line The line number (0-indexed)
          * @return Optional containing the breakpoint ID if it exists, empty otherwise
          */
-        public Optional<Integer> getBreakpointId(String filePath, int line) {
-            if (filePath == null) {
+        public Optional<Integer> getBreakpointId(String mcpath, int line) {
+            if (mcpath == null) {
                 return Optional.empty();
             }
-            
-            return Optional.ofNullable(this.breakpoints.get(filePath))
+            var filePath = scopeManager.getPath(mcpath).map(Path::of);
+            return filePath.map(this.breakpoints::get)
                     .flatMap(bps -> Optional.ofNullable(bps.breakpoints.get(line)))
                     .map(Breakpoint::id);
         }
@@ -205,7 +214,7 @@ public class DebuggerState {
          *
          * @return The map of function paths to FunctionBreakpoints
          */
-        public Map<String, FunctionBreakpoints> getBreakpointsMap() {
+        public Map<Path, FunctionBreakpoints> getBreakpointsMap() {
             return Collections.unmodifiableMap(breakpoints);
         }
     }
@@ -213,13 +222,13 @@ public class DebuggerState {
     /**
      * Checks if execution should stop at the specified location.
      *
-     * @param file The Minecraft path of the function
+     * @param mcpath The Minecraft path of the function
      * @param line The line number (0-indexed)
      * @return true if execution should stop, false otherwise
      */
-    public boolean mustStop(String file, int line) {
+    public boolean mustStop(String mcpath, int line) {
         // Only stop if there's a breakpoint at this location and we're not already stopped here
-        return breakpoints.contains(file, line) && !isAtCurrentPosition(file, line);
+        return breakpoints.contains(mcpath, line) && !isAtCurrentPosition(mcpath, line);
     }
     
     /**
@@ -238,7 +247,7 @@ public class DebuggerState {
     /**
      * Registers a breakpoint at the specified location.
      *
-     * @param file The filesystem path to the file
+     * @param file The filesystem path to the mcpath
      * @param line The line number (0-indexed)
      * @return Optional containing the breakpoint ID if successful, empty otherwise
      */
@@ -360,9 +369,9 @@ public class DebuggerState {
     }
 
     /**
-     * Clears all breakpoints for a file.
+     * Clears all breakpoints for a mcpath.
      *
-     * @param file The filesystem path to the file
+     * @param file The filesystem path to the mcpath
      */
     public void clearBreakpoints(String file) {
         breakpoints.clearBreakpoints(file);
@@ -411,25 +420,6 @@ public class DebuggerState {
             if (rpath != null && namespace != null) {
                 return Optional.of(namespace + ":" + rpath);
             }
-        }
-        
-        return Optional.empty();
-    }
-
-    /**
-     * Converts a Minecraft function path to a filesystem path.
-     *
-     * @param mcpath The Minecraft path
-     * @return Optional containing the filesystem path if conversion is successful, empty otherwise
-     */
-    public Optional<String> getRealPath(String mcpath) {
-        if (mcpath == null) {
-            return Optional.empty();
-        }
-        
-        FunctionBreakpoints functionBreakpoints = breakpoints.getBreakpointsMap().get(mcpath);
-        if (functionBreakpoints != null) {
-            return Optional.of(functionBreakpoints.getFunctionPath());
         }
         
         return Optional.empty();

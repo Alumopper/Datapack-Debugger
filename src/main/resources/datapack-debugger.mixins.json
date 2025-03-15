@@ -6,6 +6,7 @@
     "CommandExecutionContextMixin",
     "CommandFunctionActionMixin",
     "CommandFunctionMixin",
+    "DirectoryResourcePackMixin",
     "ExpandedMacroMixin",
     "FixCommandActionMixin",
     "FrameMixin",

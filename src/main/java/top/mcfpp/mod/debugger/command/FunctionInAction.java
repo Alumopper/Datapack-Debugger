@@ -38,6 +38,8 @@ public class FunctionInAction<T extends AbstractServerCommandSource<T>> implemen
      */
     @Override
     public void execute(T source, CommandExecutionContext<T> context, Frame frame){
+        // Each time we are going into a deeper scope, we want to decrement of one to not skip the mustStop evaluation at the first command
+        if(BreakPointCommand.moveSteps > 0) BreakPointCommand.moveSteps --;
         ScopeManager.get().newScope(function.id().toString(), source);
     }
 }

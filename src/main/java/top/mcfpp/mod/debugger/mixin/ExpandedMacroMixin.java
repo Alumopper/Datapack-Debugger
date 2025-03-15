@@ -14,11 +14,26 @@ import top.mcfpp.mod.debugger.command.FunctionOutAction;
 
 import java.util.List;
 
+/**
+ * Mixin for the ExpandedMacro class to add debugging capabilities to macros.
+ * This mixin injects function entry and exit actions into macro execution,
+ * allowing the debugger to track macro execution in the same way as functions.
+ *
+ * @param <T> The type of command source being used
+ */
 @Mixin(ExpandedMacro.class)
 public class ExpandedMacroMixin<T extends AbstractServerCommandSource<T>> {
 
+    /** The list of command actions in this expanded macro */
     @Shadow @Final private List<SourcedCommandAction<T>> entries;
 
+    /**
+     * Injects function entry and exit actions into the macro's command list.
+     * This allows the debugger to track when a macro is entered and exited,
+     * similar to how it tracks function calls.
+     *
+     * @param ci Callback info for the injection
+     */
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
         final var THIS = (ExpandedMacro<T>) (Object) this;
