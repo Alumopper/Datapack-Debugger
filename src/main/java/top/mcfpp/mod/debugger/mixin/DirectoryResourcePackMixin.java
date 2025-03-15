@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import top.mcfpp.mod.debugger.dap.RealPath;
 import top.mcfpp.mod.debugger.dap.ScopeManager;
 
 import java.io.IOException;
@@ -57,7 +58,7 @@ public class DirectoryResourcePackMixin {
                     Util.logErrorOrPause(String.format(Locale.ROOT, "Invalid path in pack: %s:%s, ignoring", namespace, string2));
                 } else {
                     if(identifier.getPath().endsWith(".mcfunction")) {
-                        ScopeManager.get().savePath(foundPath, identifier);
+                        ScopeManager.get().savePath(foundPath, identifier, RealPath.Kind.DIRECTORY);
                     }
                     consumer.accept(identifier, InputSupplier.create(foundPath));
                 }

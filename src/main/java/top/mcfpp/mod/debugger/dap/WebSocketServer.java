@@ -18,7 +18,11 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.HashSet;
 
-// We now define the endpoint programmatically, not with annotation
+/**
+ * WebSocket server implementation for the Debug Adapter Protocol.
+ * This class handles the communication between the debugging client (IDE) and the Minecraft server,
+ * allowing remote debugging of datapacks through a WebSocket connection.
+ */
 public class WebSocketServer extends Endpoint {
 
     private static final Logger logger = LoggerFactory.getLogger("datapack-debugger");
@@ -28,7 +32,13 @@ public class WebSocketServer extends Endpoint {
     private final LinkedBlockingQueue<byte[]> messageQueue = new LinkedBlockingQueue<>();
     private Session currentSession;
 
-    // This replaces the @OnOpen annotation
+    /**
+     * Called when a WebSocket connection is established.
+     * Sets up the Debug Adapter Protocol server and message handlers.
+     *
+     * @param session The WebSocket session
+     * @param config The endpoint configuration
+     */
     @Override
     public void onOpen(Session session, EndpointConfig config) {
         logger.info("WebSocket connected: {}", session.getRequestURI());
@@ -67,14 +77,26 @@ public class WebSocketServer extends Endpoint {
         launcher.startListening();
     }
 
-    // This replaces the @OnClose annotation
+    /**
+     * Called when a WebSocket connection is closed.
+     * Cleans up resources and notifies the debugger state.
+     *
+     * @param session The WebSocket session
+     * @param closeReason The reason for closing the connection
+     */
     @Override
     public void onClose(Session session, CloseReason closeReason) {
         logger.info("WebSocket closed: {}", closeReason);
         cleanup();
     }
 
-    // This replaces the @OnError annotation
+    /**
+     * Called when an error occurs in the WebSocket connection.
+     * Logs the error and cleans up resources.
+     *
+     * @param session The WebSocket session
+     * @param throwable The error that occurred
+     */
     @Override
     public void onError(Session session, Throwable throwable) {
         logger.error("Error in DAP server", throwable);
@@ -82,7 +104,8 @@ public class WebSocketServer extends Endpoint {
     }
     
     /**
-     * Method to clean up resources for this instance
+     * Cleans up resources when a connection is closed or an error occurs.
+     * Stops the debug adapter and clears the message queue.
      */
     private void cleanup() {
         // Signal to the DAP server that it should terminate
@@ -122,9 +145,18 @@ public class WebSocketServer extends Endpoint {
     private static Server server;
     
     /**
-     * Configuration class for the WebSocket endpoint
+     * Configuration class for the WebSocket server endpoint.
+     * This class programmatically configures the WebSocket endpoint for the Debug Adapter Protocol,
+     * allowing the server to handle connections on the configured path.
      */
     public static class WebSocketConfigurator implements ServerApplicationConfig {
+        /**
+         * Configures the WebSocket endpoint programmatically.
+         * Creates a server endpoint configuration with the path from the debugger config.
+         *
+         * @param endpointClasses The set of endpoint classes to configure
+         * @return A set containing the configured endpoint
+         */
         @Override
         public Set<ServerEndpointConfig> getEndpointConfigs(Set<Class<? extends Endpoint>> endpointClasses) {
             Set<ServerEndpointConfig> configs = new HashSet<>();
@@ -147,10 +179,9 @@ public class WebSocketServer extends Endpoint {
     }
 
     /**
-     * Launches the WebSocket server for DAP communication
-     * This method ensures any previous server is stopped before creating a new one
+     * Launches the WebSocket server using the configured port.
      * 
-     * @return A reference to the started server, if startup was successful
+     * @return An Optional containing the server if successfully launched, or empty if failed
      */
     public static Optional<Server> launch() {
         // Use configured port from settings
@@ -158,11 +189,10 @@ public class WebSocketServer extends Endpoint {
     }
 
     /**
-     * Launches the WebSocket server for DAP communication
-     * This method ensures any previous server is stopped before creating a new one
+     * Launches the WebSocket server on the specified port.
      * 
-     * @param port The port on which to start the server
-     * @return A reference to the started server, if startup was successful
+     * @param port The port to run the server on
+     * @return An Optional containing the server if successfully launched, or empty if failed
      */
     public static Optional<Server> launch(int port) {
         // Properly stop any existing server
@@ -201,7 +231,8 @@ public class WebSocketServer extends Endpoint {
     }
     
     /**
-     * Safely stops the WebSocket server
+     * Stops the WebSocket server gracefully.
+     * This method ensures all connections are closed properly before shutting down.
      */
     public static void stopServer() {
         if (server != null) {

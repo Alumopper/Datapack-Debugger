@@ -3,6 +3,7 @@ package top.mcfpp.mod.debugger.dap;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import org.eclipse.lsp4j.debug.*;
 import org.eclipse.lsp4j.debug.Thread;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
@@ -10,6 +11,7 @@ import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import top.mcfpp.mod.debugger.command.BreakPointCommand;
+import top.mcfpp.mod.debugger.command.FunctionTextLoader;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -303,6 +305,21 @@ public class DapServer implements IDebugProtocolServer {
         return CompletableFuture.completedFuture(response);
     }
 
+    @Override
+    public CompletableFuture<SourceResponse> source(SourceArguments args) {
+        LOGGER.debug("Source request received with arguments: {}", args);
+
+        var response = new SourceResponse();
+        var id = Identifier.tryParse(args.getSource().getName());
+        var content = String.join("\n", FunctionTextLoader.get(id));
+
+        response.setContent(content);
+        response.setMimeType("text/mcfunction");
+
+        LOGGER.debug("Sending Source response: {}", response);
+        return CompletableFuture.completedFuture(response);
+    }
+
     /**
      * Builds stack frames for the specified range of frames.
      */
@@ -339,12 +356,19 @@ public class DapServer implements IDebugProtocolServer {
      */
     private Source createSource(ScopeManager.DebugScope scope) {
         var source = new Source();
+        var pathOpt = scope.getPath();
 
-        scope.getPath().ifPresent(path -> {
-            source.setPath(path.path());
-            source.setName(scope.getFunction());
+        if(pathOpt.isPresent()) {
+            var path = pathOpt.get();
+            if(path.kind() == RealPath.Kind.DIRECTORY) {
+                source.setPath(path.path());
+            } else if(path.kind() == RealPath.Kind.ZIP){
+                source.setSourceReference(1);
+                source.setPath(path.path());
+            }
         }
-        );
+
+        source.setName(scope.getFunction());
 
         return source;
     }

@@ -12,9 +12,10 @@ public record RealPath(String path, Kind kind) {
      * Enumeration of supported resource container types.
      * Currently supports ZIP archives which are commonly used for datapacks.
      */
-    enum Kind {
+    public enum Kind {
         /** Indicates the resource is stored in a ZIP archive */
         ZIP,
+        DIRECTORY
     }
 
 }

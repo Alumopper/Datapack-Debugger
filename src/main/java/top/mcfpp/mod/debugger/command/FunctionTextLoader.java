@@ -35,6 +35,6 @@ public class FunctionTextLoader {
      * @return The list of source code lines, or null if the function is not found
      */
     public static List<String> get(Identifier id){
-        return FUNCTION_TEXT.get(id);
+        return FUNCTION_TEXT.getOrDefault(id, List.of());
     }
 }

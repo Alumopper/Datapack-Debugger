@@ -11,7 +11,8 @@
     "FixCommandActionMixin",
     "FrameMixin",
     "MacroMixin",
-    "SingleCommandActionSourcedMixin"
+    "SingleCommandActionSourcedMixin",
+    "ZipResourcePackMixin"
   ],
   "injectors": {
     "defaultRequire": 1

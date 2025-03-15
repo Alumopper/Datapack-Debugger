@@ -83,7 +83,7 @@ abstract class DebugAdapter extends ProtocolServer {
         super();
         this.stream = this.createStream(address);
         this.stream.on('error', (error) => {
-            // Capture et journalise l'erreur complète
+            // Capture and log the complete error
             console.error('Stream error in DebugAdapter:', error);
             this.emit('error', {
                 seq: 0,

@@ -171,9 +171,9 @@ public class ScopeManager {
      * @param path The physical file path of the function
      * @param id The Minecraft identifier for the function
      */
-    public void savePath(Path path, Identifier id) {
+    public void savePath(Path path, Identifier id, RealPath.Kind kind) {
         var location = id.getNamespace() + ":" + id.getPath().substring("function/".length(), id.getPath().length() - ".mcfunction".length());
-        PATHS.putIfAbsent(location, new RealPath(path.toAbsolutePath().toString(), null));
+        PATHS.putIfAbsent(location, new RealPath(path.toAbsolutePath().toString(), kind));
     }
 
     /**
