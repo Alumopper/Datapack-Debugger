@@ -1,13 +1,13 @@
 {
   "name": "sniffer",
   "displayName": "Sniffer",
-  "version": "0.52.0",
+  "version": "0.1.0",
   "publisher": "gunivers",
   "description": "Debug adapter for Minecraft datapacks.",
   "author": {
     "name": "Gunivers"
   },
-  "license": "MIT",
+  "license": "MPL-2.0",
   "keywords": [
     "multi-root ready"
   ],

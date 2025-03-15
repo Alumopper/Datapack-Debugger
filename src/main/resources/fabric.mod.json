@@ -14,7 +14,7 @@
 		"sources": "https://github.com/Gunivers/sniffer",
 		"issues": "https://github.com/Gunivers/sniffer/issues"
 	},
-	"license": "MIT",
+	"license": "MPL-2.0",
 	"icon": "assets/sniffer/icon.png",
 	"environment": "*",
 	"entrypoints": {

@@ -66,6 +66,22 @@ The following options are available:
 4. In VSCode, press F5 or click the "Run and Debug" button
 5. Select "Connect to Minecraft" from the dropdown menu
 
+You can now place breakpoints in your `.mcfunction` files and execute it from the game to step through the code.
+
+## Usage in Minecraft
+
+The debugger can be controlled directly from Minecraft using the following commands:
+
+- `/breakpoint continue`: Resume execution after hitting a breakpoint
+- `/breakpoint step`: Execute the next command and pause
+- `/breakpoint step_over`: Skip to the next command in the current function
+
+All commands require operator permissions (level 2) to use.
+
+When execution is paused at a breakpoint, the gametick will be freezed.
+
+
+
 ## Development
 
 ### Project Structure
@@ -92,7 +108,7 @@ npm run build
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MPL-2.0 License - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
@@ -101,5 +117,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Acknowledgements
 
 - [Fabric](https://fabricmc.net/) - Mod loader for Minecraft
-- [LSP4J](https://github.com/eclipse/lsp4j) - Java implementation of the Language Server Protocol
 - [VSCode Debug Adapter](https://code.visualstudio.com/api/extension-guides/debugger-extension) - VSCode debugging API
+- [Datapack Debugger](https://github.com/Alumopper/Datapack-Debugger/) by [Alumopper](https://github.com/Alumopper) - Original implementation of the debugger, without the DAP layer
