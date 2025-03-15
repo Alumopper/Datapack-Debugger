@@ -17,14 +17,9 @@
 
 import * as vscode from 'vscode';
 import { SocketDescriptorFactory } from './SocketDescriptorFactory';
-import { DebugTracker } from './debug-tracker';
-import { DebugLogger } from './debug-logger';
 
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
     const socketDebugFactory = new SocketDescriptorFactory();
-    const debugTracker = new DebugTracker([ 'warn' ]);
-    new DebugLogger(debugTracker);
 	console.log('activate');
     await socketDebugFactory.activate(context);
-    await debugTracker.activate(context);
 };

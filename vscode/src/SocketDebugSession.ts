@@ -8,6 +8,8 @@
  * SPDX-License-Identifier: EPL-2.0
  *********************************************************************/
 
+/** Code from https://github.com/eclipse-cdt-cloud/vscode-websocket-adapter */
+
 import WebSocketStream from 'websocket-stream';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { ProtocolServer } from '@vscode/debugadapter/lib/protocol';
@@ -17,7 +19,6 @@ const WEBSOCKET_REGEX = /^wss?:\/\/|^https?:\/\//;
 const SOCKET_TIMEOUT = 10000;
 const PATH_PREFIX = '"path":"';
 
-/** Code from https://github.com/eclipse-cdt-cloud/vscode-websocket-adapter */
 export class SocketDebugSession extends ProtocolServer {
     protected adapter: DebugAdapter;
 
