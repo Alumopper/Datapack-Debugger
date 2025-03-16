@@ -25,6 +25,7 @@ import java.util.Map;
  */
 public class VariableManager {
 
+
     /**
      * Converts a command source into a map of debugger variables.
      * This method extracts relevant information from the command source such as
@@ -39,19 +40,21 @@ public class VariableManager {
             var executorVariable = convertEntityVariables(commandSource.getEntity(), startIndex, true);
             var currentIndex = executorVariable.getRight();
 
-            var posVariable = convertPos(commandSource.getPosition(), currentIndex, true);
+            var locId = currentIndex++;
+
+            var posVariable = convertPos(commandSource.getPosition(), currentIndex, false);
             currentIndex = posVariable.getRight();
 
-            var rotVariable = convertRotation(commandSource.getRotation(), currentIndex, true);
+            var rotVariable = convertRotation(commandSource.getRotation(), currentIndex, false);
             currentIndex = rotVariable.getRight();
 
-            var worldVariable = convertWorld(commandSource.getWorld(), currentIndex, true);
+            var worldVariable = convertWorld(commandSource.getWorld(), currentIndex, false);
+
+            var locationVariable = new DebuggerVariable(locId, "location", posVariable.getLeft().value(), List.of(posVariable.getLeft(), rotVariable.getLeft(), worldVariable), true);
 
             var result = new ArrayList<DebuggerVariable>(currentIndex);
             result.add(executorVariable.getLeft());
-            result.add(posVariable.getLeft());
-            result.add(rotVariable.getLeft());
-            result.add(worldVariable);
+            result.add(locationVariable);
 
             return flattenToMap(result);
         } else {
@@ -90,10 +93,10 @@ public class VariableManager {
 
         var displayName = objectName.value() != null ? objectName.value() : objectType.value();
 
-
         var children = List.of(objectType, objectName, objectUuid, pos.getLeft(), rot.getLeft(), objectDimension);
         return new Pair<>(new DebuggerVariable(startIndex, "executor", displayName, children, isRoot), id);
     }
+
 
     /**
      * Converts an entity type to a readable string representation.
