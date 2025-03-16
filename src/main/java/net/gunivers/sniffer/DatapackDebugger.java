@@ -28,6 +28,11 @@ import java.util.logging.LogManager;
 public class DatapackDebugger implements ModInitializer {
 	/** Main logger for the mod's logging system */
 	private static final Logger logger = LoggerFactory.getLogger("sniffer");
+	
+	/** 
+	 * WebSocket server instance for Debug Adapter Protocol communication.
+	 * This server allows IDE integration by implementing DAP over WebSockets.
+	 */
 	private static Server webSocketServer;
 
 	/**

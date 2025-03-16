@@ -21,7 +21,11 @@ import static net.gunivers.sniffer.command.StepType.isStepOut;
  */
 public class FunctionOutAction<T extends AbstractServerCommandSource<T>> implements SourcedCommandAction<T> {
 
-    /** The function being exited */
+    /** 
+     * The function being exited.
+     * This reference is kept to identify which Minecraft function is being terminated
+     * and is used for debug information and scope management.
+     */
     CommandFunction<T> function;
 
     /**

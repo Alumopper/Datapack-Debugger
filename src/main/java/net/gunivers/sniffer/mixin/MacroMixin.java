@@ -6,7 +6,9 @@ import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.ExpandedMacro;
 import net.minecraft.server.function.Macro;
 import net.minecraft.server.function.Procedure;
+import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -25,7 +27,9 @@ import java.util.List;
  * @author Alumopper
  */
 @Mixin(Macro.class)
-public class MacroMixin<T extends AbstractServerCommandSource<T>> {
+public abstract class MacroMixin<T extends AbstractServerCommandSource<T>> {
+
+    @Shadow public abstract Identifier id();
 
     /** Stores the NBT compound containing macro arguments */
     @Unique private NbtCompound arguments;
@@ -61,6 +65,9 @@ public class MacroMixin<T extends AbstractServerCommandSource<T>> {
             Field field = function.getClass().getDeclaredField("arguments");
             field.setAccessible(true);
             field.set(function, this.arguments);
+            field = function.getClass().getDeclaredField("functionIdentifier");
+            field.setAccessible(true);
+            field.set(function, this.id());
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }

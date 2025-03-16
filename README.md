@@ -56,7 +56,7 @@ The following options are available:
       "type": "sniffer",
       "request": "attach",
       "name": "Connect to Minecraft",
-      "address": "localhost:25599/dap",
+      "address": "ws://localhost:25599/dap"
     }
   ]
 }

@@ -10,8 +10,10 @@
     "ExpandedMacroMixin",
     "FixCommandActionMixin",
     "FrameMixin",
+    "FunctionBuilderMixin",
     "MacroMixin",
     "SingleCommandActionSourcedMixin",
+    "VariableLineMixin",
     "ZipResourcePackMixin"
   ],
   "injectors": {

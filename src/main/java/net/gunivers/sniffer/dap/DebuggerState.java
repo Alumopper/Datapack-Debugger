@@ -29,7 +29,7 @@ public class DebuggerState {
     private static final Logger LOGGER = LoggerFactory.getLogger("sniffer");
     
     /** Pattern to extract namespace and path from a datapack function mcpath path */
-    private static final Pattern PATH_PATTERN = Pattern.compile("data/(?<namespace>\\w+)/function/(?<path>.+)\\.mcfunction");
+    private static final Pattern PATH_PATTERN = Pattern.compile("data/(?<namespace>.+)/function/(?<path>.+)\\.mcfunction");
     
     /** Standard reason string for breakpoint stop events */
     private static final String BREAKPOINT_REASON = "breakpoint";

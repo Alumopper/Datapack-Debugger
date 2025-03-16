@@ -6,7 +6,9 @@ import net.minecraft.command.SourcedCommandAction;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import net.gunivers.sniffer.dap.ScopeManager;
+import net.minecraft.server.function.ExpandedMacro;
 
+import static net.gunivers.sniffer.Utils.getId;
 import static net.gunivers.sniffer.command.StepType.isStepOut;
 
 /**
@@ -21,7 +23,11 @@ import static net.gunivers.sniffer.command.StepType.isStepOut;
  */
 public class FunctionInAction<T extends AbstractServerCommandSource<T>> implements SourcedCommandAction<T> {
 
-    /** The function being entered */
+    /** 
+     * The function being entered.
+     * This reference stores the Minecraft function that is about to be executed
+     * and is used to create a new debugging scope with the proper function ID.
+     */
     CommandFunction<T> function;
 
     /**
@@ -45,6 +51,10 @@ public class FunctionInAction<T extends AbstractServerCommandSource<T>> implemen
         // Each time we are going into a deeper scope, we want to decrement of one to not skip the mustStop evaluation at the first command
         // We must do it here since the decrementation in FixCommandActionMixin is not called when a mcfunction is called
         if(BreakPointCommand.moveSteps > 0 && !isStepOut()) BreakPointCommand.moveSteps --;
-        ScopeManager.get().newScope(function.id().toString(), source);
+        var id = function.id();
+        if(function instanceof ExpandedMacro<T> macro) {
+            id = getId(macro);
+        }
+        ScopeManager.get().newScope(id.toString(), source);
     }
 }

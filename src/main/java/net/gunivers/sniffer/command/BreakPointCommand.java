@@ -262,7 +262,7 @@ public class BreakPointCommand {
                 }
             }
         } catch (Exception e) {
-            LOGGER.error(e.getMessage());
+            LOGGER.error(e.getMessage(), e);
         } finally {
             isDebugCommand = false;
             if (context != null) {
@@ -342,50 +342,4 @@ public class BreakPointCommand {
             return null;
         }
     }
-
-//    /**
-//     * Steps over the next command, executing it without entering function calls.
-//     * @param steps Number of steps to execute
-//     * @param source The command source that triggered the step over
-//     */
-//    public static void stepOver(int steps, ServerCommandSource source) {
-//        if (!isDebugging) {
-//            source.sendError(Text.translatable("commands.breakpoint.step.fail"));
-//            return;
-//        }
-//        isDebugCommand = true;
-//        moveSteps = steps;
-//        CommandExecutionContext<?> context = null;
-//        try {
-//            while (moveSteps > 0) {
-//                context = storedCommandExecutionContext.peekFirst();
-//                if (context != null) {
-//                    callFunction(context, "onStepOver");
-//                    if (moveSteps != 0) {
-//                        storedCommandExecutionContext.pollFirst().close();
-//                    } else {
-//                        boolean result = (boolean) callFunction(context, "ifContainsCommandAction");
-//                        if(!result){
-//                            storedCommandExecutionContext.pollFirst().close();
-//                        }
-//                        break;
-//                    }
-//                } else {
-//                    source.sendFeedback(() -> Text.translatable("commands.breakpoint.step.over"), false);
-//                    continueExec(source);
-//                }
-//            }
-//        } catch (Exception e) {
-//            LOGGER.error(e.getMessage());
-//        } finally {
-//            isDebugCommand = false;
-//            if (context != null) {
-//                try {
-//                    context.close();
-//                } catch (Exception e) {
-//                    LOGGER.error(e.toString());
-//                }
-//            }
-//        }
-//    }
 }
