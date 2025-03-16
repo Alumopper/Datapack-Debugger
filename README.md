@@ -75,6 +75,7 @@ The debugger can be controlled directly from Minecraft using the following comma
 - `/breakpoint continue`: Resume execution after hitting a breakpoint
 - `/breakpoint step`: Execute the next command and pause
 - `/breakpoint step_over`: Skip to the next command in the current function
+- `/breakpoint step_out`: Continue execution until the current function returns
 
 All commands require operator permissions (level 2) to use.
 

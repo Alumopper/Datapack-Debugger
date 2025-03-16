@@ -7,6 +7,8 @@ import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import net.gunivers.sniffer.dap.ScopeManager;
 
+import static net.gunivers.sniffer.command.StepType.isStepOut;
+
 /**
  * Action handler for when a function is exited during debugging.
  * This class manages the function call stack by popping the current function
@@ -39,8 +41,9 @@ public class FunctionOutAction<T extends AbstractServerCommandSource<T>> impleme
      * @param frame The current execution frame
      */
     @Override
-    public void execute(T source, CommandExecutionContext<T> context, Frame frame){
+    public void execute(T source, CommandExecutionContext<T> context, Frame frame) {
         ScopeManager.get().unscope();
-        if(BreakPointCommand.moveSteps > 0 && frame.depth() > 1) BreakPointCommand.moveSteps --;
+        // BreakPointCommand.stepDepth - 1 because we only want to decrement if we go higher than the stepDepth
+        if(BreakPointCommand.moveSteps > 0 && isStepOut() && frame.depth() - 1 <= BreakPointCommand.stepDepth - 1) BreakPointCommand.moveSteps --;
     }
 }

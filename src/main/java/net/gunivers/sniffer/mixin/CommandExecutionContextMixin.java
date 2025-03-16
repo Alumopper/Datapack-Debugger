@@ -1,5 +1,6 @@
 package net.gunivers.sniffer.mixin;
 
+import net.gunivers.sniffer.command.FunctionInAction;
 import net.minecraft.command.*;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static net.gunivers.sniffer.command.BreakPointCommand.*;
+import static net.gunivers.sniffer.command.StepType.*;
 
 /**
  * Mixin class that extends CommandExecutionContext to add debugging capabilities.
@@ -57,6 +59,18 @@ abstract public class CommandExecutionContextMixin<T> {
     @Shadow protected abstract void queuePendingCommands();
 
     @Shadow private static <T extends AbstractServerCommandSource<T>> Frame frame(CommandExecutionContext<T> context, ReturnValueConsumer returnValueConsumer){return null;}
+
+    /**
+     * Holds the next command that will be executed in the current context.
+     * This field helps track the execution flow for debugging purposes.
+     */
+    @Unique private SourcedCommandAction<?> nextCommand;
+
+    /**
+     * Indicates whether the current command is the last one.
+     * Used to optimize step operations, particularly for stepOut functionality.
+     */
+    @Unique private boolean isLastCommand;
 
     /**
      * Injects code to handle procedure calls during debugging.
@@ -146,9 +160,15 @@ abstract public class CommandExecutionContextMixin<T> {
     /**
      * Handles stepping through command execution.
      * This method manages the command queue and handles breakpoints during step-by-step execution.
+     * It implements the core stepping logic that controls the execution flow during debugging.
+     * This includes:
+     * - Processing commands one at a time
+     * - Checking for breakpoints and pause conditions
+     * - Updating debug state based on step type (stepIn, stepOver, stepOut)
+     * - Managing command execution depth
      */
     @Unique
-    private void onStep(){
+    private void onStep() {
         final var THIS = (CommandExecutionContext<T>) (Object) this;
 
         // Process pending commands before starting the step
@@ -156,7 +176,7 @@ abstract public class CommandExecutionContextMixin<T> {
 
         while (true) {
             // If we are in step over mode, update the stepOverDepth if needed
-            updateStepOverDepthIfNeeded();
+            updateStepDepthIfNeeded();
 
             // Check command execution limits
             if (this.commandsRemaining <= 0) {
@@ -171,13 +191,17 @@ abstract public class CommandExecutionContextMixin<T> {
                 return;
             }
 
-            processDebuggerStateForEntry(commandQueueEntry);
+            this.getNextCommand(commandQueueEntry).ifPresent(command -> this.nextCommand = command);
+
+            var shouldPause = mustPause(commandQueueEntry);
 
             // If we're debugging and the command is inside a function
             // and we're not stepping through code, pause execution
-            if(isDebugging && commandQueueEntry.frame().depth() != 0 && moveSteps == 0) {
+            if(shouldPause) {
+                DebuggerState.get().stop("step");
+                moveSteps = 0;
                 pauseExecution(commandQueueEntry, THIS);
-                resetStepOverIfNeeded();
+                resetStepTypeIfNeeded();
                 return;
             }
 
@@ -201,30 +225,40 @@ abstract public class CommandExecutionContextMixin<T> {
     }
 
     /**
-     * Updates the debugging state based on step over conditions.
-     * 
+     * Updates the step depth if needed.
+     * This method tracks the depth level at which stepping operations were initiated.
+     * For stepOver and stepOut operations, we need to remember the depth at which
+     * they were triggered to correctly determine when to pause execution.
+     */
+    @Unique
+    private void updateStepDepthIfNeeded() {
+        if(!isStepIn() && (stepDepth == -1 || isDebugging)) {
+            stepDepth = this.currentDepth;
+        }
+    }
+
+    /**
+     * Updates the debugging state based on step conditions.
+     * This method determines whether debugging should be active based on:
+     * - The current stepping mode (stepIn, stepOver, stepOut)
+     * - The current depth relative to the step depth
+     * - Whether we're at the last command of a function
+     *
      * @param commandQueueEntry The current command entry
      */
     @Unique
     private void updateDebuggingState(CommandQueueEntry<T> commandQueueEntry) {
         // When we are in step over, we only activate the debug mode if we are in the same depth level than the one where the step over has been triggered
         // If the debug mode is already activate and the previous condition is false, then we keep the debug mode since this means we find a nested breakpoint
-        isDebugging = (isStepOver && this.currentDepth >= commandQueueEntry.frame().depth() && this.currentDepth == stepOverDepth) 
-                     || (!isStepOver && isDebugging);
-    }
-
-    /**
-     * Updates the step over depth if needed.
-     */
-    @Unique
-    private void updateStepOverDepthIfNeeded() {
-        if(isStepOver && (stepOverDepth == -1 || isDebugging)) {
-            stepOverDepth = this.currentDepth;
-        }
+        isDebugging = (isStepOver() && this.currentDepth >= commandQueueEntry.frame().depth() && this.currentDepth == stepDepth)
+                || (isStepOut() && (isLastCommand || (this.currentDepth > commandQueueEntry.frame().depth())))
+                || (isStepIn() && isDebugging);
     }
 
     /**
      * Executes a command entry and updates the current depth.
+     * This method is responsible for the actual execution of commands during debugging.
+     * It updates the current depth based on the frame depth and then executes the command.
      *
      * @param commandQueueEntry The command entry to execute
      * @param context The command execution context
@@ -236,13 +270,15 @@ abstract public class CommandExecutionContextMixin<T> {
     }
 
     /**
-     * Resets step over state if needed.
+     * Resets step type state if needed.
+     * This method handles the cleanup of stepping-related state after a step operation
+     * has completed. For non-stepIn operations, it resets the step type and depth.
      */
     @Unique
-    private void resetStepOverIfNeeded() {
-        if(isStepOver) {
-            isStepOver = false;
-            stepOverDepth = -1;
+    private void resetStepTypeIfNeeded() {
+        if(!isStepIn()) {
+            stepType = STEP_IN;
+            stepDepth = -1;
         }
     }
 
@@ -264,6 +300,8 @@ abstract public class CommandExecutionContextMixin<T> {
 
     /**
      * Processes breakpoint information for a command entry.
+     * This method checks if a breakpoint is set at the current line in the current function.
+     * If a breakpoint is found, it triggers the debugger to stop.
      * 
      * @param commandQueueEntry The command entry to process
      * @return true if a breakpoint was triggered, false otherwise
@@ -295,29 +333,53 @@ abstract public class CommandExecutionContextMixin<T> {
     }
 
     /**
-     * Processes debugger state information for a command entry.
+     * Determines whether execution should pause at the current command.
+     * This method checks various conditions to decide if debugging should stop:
+     * - If we're in a debugging state and inside a function
+     * - If the command is not a function entry/exit action
+     * - If we've used up all our move steps
      * 
-     * @param commandQueueEntry The command entry to process
+     * @param commandQueueEntry The command entry to check
+     * @return true if execution should pause, false otherwise
      */
     @Unique
-    private void processDebuggerStateForEntry(CommandQueueEntry<T> commandQueueEntry) {
-        if(commandQueueEntry.frame().depth() <= 0) {
-            return;
-        }
-        
-        var nextCommand = this.getNextCommand(commandQueueEntry);
+    private boolean mustPause(CommandQueueEntry<T> commandQueueEntry) {
+        var shouldPause = isDebugging && commandQueueEntry.frame().depth() != 0;
 
-        var lineOpt = nextCommand.flatMap(command -> EncapsulationBreaker.getAttribute(command, "sourceLine"));
-        if (lineOpt.isPresent() && !(nextCommand.get() instanceof FunctionOutAction<?>)) {
-            var line = (int) lineOpt.get();
-            ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line));
-            DebuggerState.get().stop("step");
-        // If we find a FunctionOutAction, we increment the moveSteps variable to pass over it instead of stopping
-        } else if(nextCommand.isPresent() && nextCommand.get() instanceof FunctionOutAction<?>) {
-            moveSteps++;
+        var nextCommandOpt = Optional.ofNullable(this.nextCommand);
+
+        if(commandQueueEntry.frame().depth() > 0 && nextCommandOpt.isPresent()) {
+            var nextCommand = nextCommandOpt.get();
+            if(nextCommand instanceof FunctionOutAction<?> || nextCommand instanceof FunctionInAction<?>) {
+                shouldPause = false;
+            } else {
+                var lineOpt =  EncapsulationBreaker.getAttribute(nextCommand, "sourceLine");
+                if(lineOpt.isPresent()) {
+                    var line = (int) lineOpt.get();
+                    ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line));
+                }
+            }
         }
+
+        // For stepOut, if this is the last command of the function, we can optimize
+        // by ensuring the debugger will stop after this command
+        if (isLastCommand && commandQueueEntry.frame().depth() <= 1) {
+            // Quickly reduce moveSteps to stop after this last command execution
+            moveSteps = 1; // Will be reduced to 0 during execution
+            if(isStepOut()) moveSteps++;
+        }
+
+        return shouldPause && moveSteps == 0;
     }
 
+    /**
+     * Gets the next command to be executed from a command queue entry.
+     * This method also sets the isLastCommand flag if the next command 
+     * is the last one in the function.
+     *
+     * @param commandQueueEntry The command queue entry to process
+     * @return An Optional containing the next command, or empty if not found
+     */
     @Unique
     private Optional<SourcedCommandAction<?>> getNextCommand(CommandQueueEntry<T> commandQueueEntry) {
         var function = getExpandedMacroFromFrame(commandQueueEntry.frame());
@@ -334,11 +396,14 @@ abstract public class CommandExecutionContextMixin<T> {
             return Optional.empty();
         }
 
+        this.isLastCommand = index + 1 >= function.entries().size() && commandQueueEntry.frame().depth() <= 1;
+
         return Optional.ofNullable(function.entries().get(index));
     }
 
     /**
      * Gets the expanded macro from a frame using reflection.
+     * This method uses EncapsulationBreaker to access private fields in the Frame object.
      * 
      * @param frame The frame to get the macro from
      * @return The expanded macro, or null if an error occurred
@@ -355,6 +420,8 @@ abstract public class CommandExecutionContextMixin<T> {
 
     /**
      * Retrieves the expanded macro and its arguments from a command queue entry.
+     * This method extracts function information and arguments from a command entry.
+     * It uses EncapsulationBreaker to access private fields.
      * 
      * @param commandQueueEntry The command queue entry
      * @return A pair containing the expanded macro and its arguments, or null if not available
@@ -386,6 +453,8 @@ abstract public class CommandExecutionContextMixin<T> {
 
     /**
      * Retrieves the NBT value for a given key from the current command context.
+     * This method looks up a specific key in the arguments of the current function.
+     * 
      * @param key The key to look up
      * @return A pair containing the NBT element and whether it's a macro, or null if not found
      */
@@ -410,6 +479,8 @@ abstract public class CommandExecutionContextMixin<T> {
 
     /**
      * Retrieves all NBT values from the current command context.
+     * This method returns all arguments of the current function as an NBT compound.
+     * 
      * @return The NBT compound containing all values, or null if not available
      */
     @Unique
@@ -426,6 +497,8 @@ abstract public class CommandExecutionContextMixin<T> {
 
     /**
      * Retrieves all available keys from the current command context.
+     * This method gets a list of all argument keys in the current function.
+     * 
      * @return A list of all available keys, or null if no NBT data is available
      */
     @Unique
@@ -447,6 +520,8 @@ abstract public class CommandExecutionContextMixin<T> {
 
     /**
      * Checks if a command action is a fixed command action.
+     * This method uses reflection to examine the fields of the action.
+     * 
      * @param action The command action to check
      * @return true if the action is a fixed command action, false otherwise
      */
@@ -475,6 +550,8 @@ abstract public class CommandExecutionContextMixin<T> {
 
     /**
      * Checks if the current command context contains a command action.
+     * This is a simple helper method that checks if the command queue has any entries.
+     * 
      * @return true if a command action is present, false otherwise
      */
     @Unique

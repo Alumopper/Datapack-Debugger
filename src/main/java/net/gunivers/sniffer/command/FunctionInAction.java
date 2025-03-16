@@ -7,6 +7,8 @@ import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import net.gunivers.sniffer.dap.ScopeManager;
 
+import static net.gunivers.sniffer.command.StepType.isStepOut;
+
 /**
  * Action handler for when a function is entered during debugging.
  * This class manages the function call stack by pushing the current function
@@ -41,7 +43,8 @@ public class FunctionInAction<T extends AbstractServerCommandSource<T>> implemen
     @Override
     public void execute(T source, CommandExecutionContext<T> context, Frame frame){
         // Each time we are going into a deeper scope, we want to decrement of one to not skip the mustStop evaluation at the first command
-        if(BreakPointCommand.moveSteps > 0) BreakPointCommand.moveSteps --;
+        // We must do it here since the decrementation in FixCommandActionMixin is not called when a mcfunction is called
+        if(BreakPointCommand.moveSteps > 0 && !isStepOut()) BreakPointCommand.moveSteps --;
         ScopeManager.get().newScope(function.id().toString(), source);
     }
 }

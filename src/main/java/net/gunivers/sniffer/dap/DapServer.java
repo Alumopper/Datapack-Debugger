@@ -1,5 +1,6 @@
 package net.gunivers.sniffer.dap;
 
+import net.gunivers.sniffer.command.StepType;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -209,7 +210,7 @@ public class DapServer implements IDebugProtocolServer {
         LOGGER.debug("Next request received with arguments: {}", args);
 
         try {
-            BreakPointCommand.isStepOver = true;
+            BreakPointCommand.stepType = StepType.STEP_OVER;
             BreakPointCommand.step(1, getCommandSource());
         } catch (Exception e) {
             LOGGER.warn("Error during step over execution", e);
@@ -226,9 +227,27 @@ public class DapServer implements IDebugProtocolServer {
         LOGGER.debug("StepIn request received with arguments: {}", args);
 
         try {
+            BreakPointCommand.stepType = StepType.STEP_IN;
             BreakPointCommand.step(1, getCommandSource());
         } catch (Exception e) {
             LOGGER.warn("Error during step in execution", e);
+        }
+
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * Handles step out execution command.
+     */
+    @Override
+    public CompletableFuture<Void> stepOut(StepOutArguments args) {
+        LOGGER.debug("StepOut request received with arguments: {}", args);
+
+        try {
+            BreakPointCommand.stepType = StepType.STEP_OUT;
+            BreakPointCommand.step(1, getCommandSource());
+        } catch (Exception e) {
+            LOGGER.warn("Error during step out execution", e);
         }
 
         return CompletableFuture.completedFuture(null);

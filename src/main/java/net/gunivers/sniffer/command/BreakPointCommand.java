@@ -36,16 +36,33 @@ public class BreakPointCommand {
     public static boolean isDebugging = false;
     /** Controls whether debug mode is enabled */
     public static boolean debugMode = true;
-    /** Number of steps to execute in step mode */
+    /** 
+     * Number of steps to execute in step mode.
+     * When this value is greater than 0, the debugger will continue execution
+     * for that many steps before pausing again. This is decremented
+     * as each command is executed.
+     */
     public static int moveSteps = 0;
-    /** Depth being currently debugged by the step over, to not go in deeper depth. -1 = no depth currently debugged */
-    public static int stepOverDepth = -1;
-    /** Whether the current debugging step is a step over */
-    public static boolean isStepOver = false;
+    /** 
+     * The current stepping mode for the debugger.
+     * Controls how the debugger behaves when stepping through code:
+     * - STEP_IN: Steps into function calls
+     * - STEP_OVER: Executes function calls as a single step
+     * - STEP_OUT: Continues execution until returning from the current function
+     * @see StepType
+     */
+    public static StepType stepType = StepType.STEP_IN;
     /** Queue storing command execution contexts for debugging */
     public static final Deque<CommandExecutionContext<?>> storedCommandExecutionContext = Queues.newArrayDeque();
     /** Logger instance for this class */
     private static final org.slf4j.Logger LOGGER = DatapackDebugger.getLogger();
+
+    /**
+     * Tracks the depth level at which a step operation was initiated.
+     * Used by stepOver and stepOut operations to determine when to stop execution.
+     * A value of -1 indicates that no depth tracking is active.
+     */
+    public static int stepDepth = -1;
 
     /**
      * Initializes the breakpoint command system.
@@ -77,12 +94,14 @@ public class BreakPointCommand {
                     })
                     .then(literal("step")
                             .executes(context -> {
+                                stepType = StepType.STEP_IN;
                                 step(1, context.getSource());
                                 return 1;
                             })
                             .then(argument("lines", IntegerArgumentType.integer())
                                     .executes(context -> {
                                         final int lines = IntegerArgumentType.getInteger(context, "lines");
+                                        stepType = StepType.STEP_IN;
                                         step(lines, context.getSource());
                                         return 1;
                                     })
@@ -90,18 +109,25 @@ public class BreakPointCommand {
                     )
                     .then(literal("step_over")
                             .executes(context -> {
-                                isStepOver = true;
+                                stepType = StepType.STEP_OVER;
                                 step(1, context.getSource());
                                 return 1;
                             })
                             .then(argument("lines", IntegerArgumentType.integer())
                                     .executes(context -> {
-                                        isStepOver = true;
+                                        stepType = StepType.STEP_OVER;
                                         final int lines = IntegerArgumentType.getInteger(context, "lines");
                                         step(lines, context.getSource());
                                         return 1;
                                     })
                             )
+                    )
+                    .then(literal("step_out")
+                            .executes(context -> {
+                                stepType = StepType.STEP_OUT;
+                                step(1, context.getSource());
+                                return 1;
+                            })
                     )
                     .then(literal("continue")
                             .executes(context -> {
@@ -193,8 +219,8 @@ public class BreakPointCommand {
         isDebugging = false;
         debugMode = true;
         moveSteps = 0;
-        isStepOver = false;
-        stepOverDepth = -1;
+        stepType = StepType.STEP_IN;
+        stepDepth = -1;
         storedCommandExecutionContext.clear();
     }
 

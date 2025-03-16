@@ -3,6 +3,7 @@ package net.gunivers.sniffer.dap;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerApplicationConfig;
 import jakarta.websocket.server.ServerEndpointConfig;
+import net.gunivers.sniffer.command.BreakPointCommand;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.eclipse.lsp4j.debug.launch.DSPLauncher;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
@@ -89,6 +90,7 @@ public class WebSocketServer extends Endpoint {
     @Override
     public void onClose(Session session, CloseReason closeReason) {
         logger.info("WebSocket closed: {}", closeReason);
+        BreakPointCommand.clear();
         cleanup();
     }
 
