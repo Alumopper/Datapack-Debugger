@@ -14,6 +14,7 @@ import WebSocketStream from 'websocket-stream';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { ProtocolServer } from '@vscode/debugadapter/lib/protocol';
 import * as vscode from 'vscode';
+import { TerminatedEvent } from '@vscode/debugadapter';
 
 const WEBSOCKET_REGEX = /^wss?:\/\/|^https?:\/\//;
 const SOCKET_TIMEOUT = 10000;
@@ -31,8 +32,14 @@ export class SocketDebugSession extends ProtocolServer {
             throw new Error('Raw socket connections are not supported, use a websocket address');
         }
         this.adapter.on('message', message => this.onMessage(message));
-        this.adapter.on('error', (event: DebugProtocol.Event) => this.emit(event.event, event));
-        this.adapter.on('close', (event: DebugProtocol.Event) => this.emit(event.event, event));
+        this.adapter.on('error', (event: DebugProtocol.Event) => {
+            this.emit(event.event, event);
+            this.terminateSession();
+        });
+        this.adapter.on('close', (event: DebugProtocol.Event) => {
+            this.emit(event.event, event);
+            this.terminateSession();
+        });
     }
 
     public dispose() {
@@ -74,6 +81,12 @@ export class SocketDebugSession extends ProtocolServer {
         }
 
         return JSON.parse(json);
+    }
+
+    private terminateSession() {
+        console.log('WebSocket connection closed, terminating debug session');
+        this.sendEvent(new TerminatedEvent());
+        vscode.window.showWarningMessage('Connection reset detected, terminating debug session');
     }
 }
 
