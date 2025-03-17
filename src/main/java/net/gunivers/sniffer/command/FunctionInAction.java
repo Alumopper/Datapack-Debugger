@@ -1,8 +1,10 @@
 package net.gunivers.sniffer.command;
 
+import net.gunivers.sniffer.EncapsulationBreaker;
 import net.minecraft.command.CommandExecutionContext;
 import net.minecraft.command.Frame;
 import net.minecraft.command.SourcedCommandAction;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import net.gunivers.sniffer.dap.ScopeManager;
@@ -55,6 +57,8 @@ public class FunctionInAction<T extends AbstractServerCommandSource<T>> implemen
         if(function instanceof ExpandedMacro<T> macro) {
             id = getId(macro);
         }
-        ScopeManager.get().newScope(id.toString(), source);
+
+        var macroVariables = EncapsulationBreaker.getAttribute(frame, "function").flatMap(fun -> EncapsulationBreaker.getAttribute(fun, "arguments"));
+        ScopeManager.get().newScope(id.toString(), source, (NbtCompound) macroVariables.orElse(null));
     }
 }

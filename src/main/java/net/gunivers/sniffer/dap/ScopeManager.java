@@ -1,5 +1,6 @@
 package net.gunivers.sniffer.dap;
 
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.util.Identifier;
@@ -64,12 +65,14 @@ public class ScopeManager {
          * @param function The function mcpath being executed
          * @param executor The command source executing the function
          */
-        protected DebugScope(@Nullable DebugScope parent, String function, AbstractServerCommandSource<?> executor) {
+        protected DebugScope(@Nullable DebugScope parent, String function, AbstractServerCommandSource<?> executor, NbtCompound macroVariables) {
             this.parent = parent;
             this.function = function;
             this.path = PATHS.get(function);
             this.executor = executor;
             this.variables = VariableManager.convertCommandSource(executor, ID);
+            var macro = VariableManager.convertNbtCompound("macro", macroVariables, ID + this.variables.size(), true);
+            this.variables.putAll(macro);
             ID += variables.size();
         }
 
@@ -194,8 +197,8 @@ public class ScopeManager {
      * @param function The function mcpath
      * @param executor The command source executing the function
      */
-    public void newScope(String function, AbstractServerCommandSource<?> executor) {
-        var scope = new DebugScope(this.currentScope, function, executor);
+    public void newScope(String function, AbstractServerCommandSource<?> executor, NbtCompound macroVariables) {
+        var scope = new DebugScope(this.currentScope, function, executor, macroVariables);
         this.scopeIds.add(scope.id);
         this.debugScopeStack.push(scope);
         this.currentScope = scope;

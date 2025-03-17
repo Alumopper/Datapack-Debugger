@@ -86,7 +86,7 @@ export class SocketDebugSession extends ProtocolServer {
     private terminateSession() {
         console.log('WebSocket connection closed, terminating debug session');
         this.sendEvent(new TerminatedEvent());
-        vscode.window.showWarningMessage('Connection reset detected, terminating debug session');
+        // vscode.window.showWarningMessage('Connection reset detected, terminating debug session');
     }
 }
 

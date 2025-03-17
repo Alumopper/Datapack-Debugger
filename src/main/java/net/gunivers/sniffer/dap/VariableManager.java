@@ -2,6 +2,7 @@ package net.gunivers.sniffer.dap;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.util.Pair;
@@ -183,6 +184,26 @@ public class VariableManager {
     private static void flattenToMap(DebuggerVariable variable, Map<Integer, DebuggerVariable> variables) {
         variables.put(variable.id(), variable);
         variable.children().forEach(child -> flattenToMap(child, variables));
+    }
+
+    /**
+     * Converts an NBT compound into a map of debugger variables.
+     * This method uses a visitor pattern to traverse the NBT structure and create
+     * corresponding debugger variables for each element.
+     *
+     * @param name The name of the root variable
+     * @param compound The NBT compound to convert, may be null
+     * @param startIndex The starting index for variable IDs
+     * @param isRoot Whether this variable is a root-level variable
+     * @return A map of variable IDs to debugger variables, or an empty map if compound is null
+     */
+    public static Map<Integer, DebuggerVariable> convertNbtCompound(String name, NbtCompound compound, int startIndex, boolean isRoot) {
+        if(compound != null) {
+            var visitor = new NbtElementVariableVisitor(startIndex, name, isRoot);
+            compound.accept(visitor);
+            return visitor.get();
+        }
+        return Map.of();
     }
 
 }

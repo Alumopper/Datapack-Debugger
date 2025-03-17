@@ -17,6 +17,7 @@ public record RealPath(String path, Kind kind) {
     public enum Kind {
         /** Indicates the resource is stored in a ZIP archive */
         ZIP,
+        /** Indicates the resource is stored in a directory on the file system */
         DIRECTORY
     }
 

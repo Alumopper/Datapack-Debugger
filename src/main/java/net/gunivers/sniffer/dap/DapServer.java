@@ -465,7 +465,7 @@ public class DapServer implements IDebugProtocolServer {
         }
 
         var response = new VariablesResponse();
-        response.setVariables(dapVariables.toArray(Variable[]::new));
+        response.setVariables(dapVariables.stream().sorted(Comparator.comparingInt(Variable::getVariablesReference)).toArray(Variable[]::new));
         LOGGER.debug("Sending Variables response: {}", response);
         return CompletableFuture.completedFuture(response);
     }
