@@ -2,8 +2,6 @@ package net.gunivers.sniffer.dap;
 
 import net.gunivers.sniffer.command.StepType;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.eclipse.lsp4j.debug.*;
 import org.eclipse.lsp4j.debug.Thread;
@@ -17,6 +15,9 @@ import net.gunivers.sniffer.command.FunctionTextLoader;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
+import static net.gunivers.sniffer.Utils.addSnifferPrefix;
+import static net.gunivers.sniffer.command.BreakPointCommand.continueExec;
+
 /**
  * A DAP (Debug Adapter Protocol) server implementation using LSP4J.
  * Provides debugging capabilities for Minecraft datapacks.
@@ -26,11 +27,10 @@ import java.util.concurrent.CompletableFuture;
 public class DapServer implements IDebugProtocolServer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("sniffer");
-    private static final String MESSAGE_PREFIX = "[Sniffer]";
 
     // Constants for messages
-    private static final String ATTACHED_MESSAGE = " Attached to VSCode!";
-    private static final String DISCONNECTED_MESSAGE = " Disconnected from VSCode.";
+    private static final String ATTACHED_MESSAGE = "Attached to VSCode!";
+    private static final String DISCONNECTED_MESSAGE = "Disconnected from VSCode.";
     private static final String BREAKPOINT_DESCRIPTION = "Breakpoint reached";
     private static final String MAIN_THREAD_NAME = "Main Thread";
 
@@ -117,6 +117,7 @@ public class DapServer implements IDebugProtocolServer {
         LOGGER.debug("Disconnect request received with arguments: {}", args);
 
         sendMessageToAllPlayers(DISCONNECTED_MESSAGE);
+        continueExec(DebuggerState.get().getCommandSource());
         return CompletableFuture.completedFuture(null);
     }
 
@@ -261,7 +262,7 @@ public class DapServer implements IDebugProtocolServer {
         LOGGER.debug("Continue request received with arguments: {}", args);
 
         try {
-            BreakPointCommand.continueExec(getCommandSource());
+            continueExec(getCommandSource());
         } catch (Exception e) {
             LOGGER.warn( "Error during continue execution", e);
         }
@@ -591,8 +592,7 @@ public class DapServer implements IDebugProtocolServer {
     private void sendMessageToAllPlayers(String message) {
         try {
             debuggerState.getServer().getPlayerManager().getPlayerList().forEach(player -> {
-                var header = Text.literal(MESSAGE_PREFIX).formatted(Formatting.AQUA);
-                player.sendMessage(header.append(Text.literal(message).formatted(Formatting.WHITE)));
+                player.sendMessage(addSnifferPrefix(message));
             });
         } catch (Exception e) {
             LOGGER.warn("Error sending message to players", e);

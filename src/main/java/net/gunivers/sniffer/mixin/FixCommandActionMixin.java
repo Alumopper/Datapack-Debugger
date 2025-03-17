@@ -6,6 +6,7 @@ import net.minecraft.command.Frame;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -14,6 +15,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.gunivers.sniffer.command.BreakPointCommand;
 
+import static net.gunivers.sniffer.Utils.addSnifferPrefix;
 import static net.gunivers.sniffer.command.StepType.isStepOut;
 
 /**
@@ -52,7 +54,7 @@ public class FixCommandActionMixin<T extends AbstractServerCommandSource<T>> {
                 // We send to each player the executing command
                 var players = serverCommandSource.getServer().getPlayerManager().getPlayerList();
                 for(var player : players) {
-                    player.sendMessage(Text.translatable("sniffer.commands.breakpoint.run", this.command));
+                    player.sendMessage(addSnifferPrefix(Text.translatable("sniffer.commands.breakpoint.run", this.command).formatted(Formatting.WHITE)));
                 }
             }
         }

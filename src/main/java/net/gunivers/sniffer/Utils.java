@@ -1,7 +1,11 @@
 package net.gunivers.sniffer;
 
 import net.minecraft.server.function.ExpandedMacro;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+
+import static net.minecraft.text.Text.literal;
 
 /**
  * Utility class providing helper methods for the Datapack Debugger.
@@ -20,6 +24,17 @@ public class Utils {
      */
     public static Identifier getId(ExpandedMacro<?> function) {
         return (Identifier) EncapsulationBreaker.getAttribute(function, "functionIdentifier").orElse(Identifier.of("foo:bar"));
+    }
+
+    private static final String MESSAGE_PREFIX = "[Sniffer] ";
+
+    public static Text addSnifferPrefix(Text text) {
+        var header = Text.literal(MESSAGE_PREFIX).formatted(Formatting.AQUA);
+        return header.append(text);
+    }
+
+    public static Text addSnifferPrefix(String text) {
+        return addSnifferPrefix(Text.literal(text).formatted(Formatting.WHITE));
     }
 
 }

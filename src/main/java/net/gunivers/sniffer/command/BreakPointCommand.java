@@ -4,6 +4,8 @@ import com.google.common.collect.Queues;
 import com.mojang.brigadier.arguments.*;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandExecutionContext;
+
+import static net.gunivers.sniffer.Utils.addSnifferPrefix;
 import static net.minecraft.server.command.CommandManager.literal;
 import static net.minecraft.server.command.CommandManager.argument;
 
@@ -12,6 +14,7 @@ import net.minecraft.nbt.NbtHelper;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -257,7 +260,7 @@ public class BreakPointCommand {
                         break;
                     }
                 } else {
-                    source.sendFeedback(() -> Text.translatable("sniffer.commands.breakpoint.step.over"), false);
+                    source.sendFeedback(() -> addSnifferPrefix(Text.translatable("sniffer.commands.breakpoint.step.over").formatted(Formatting.WHITE)), false);
                     continueExec(source);
                 }
             }

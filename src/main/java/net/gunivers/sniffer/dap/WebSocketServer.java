@@ -19,6 +19,8 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.HashSet;
 
+import static net.gunivers.sniffer.command.BreakPointCommand.continueExec;
+
 /**
  * WebSocket server implementation for the Debug Adapter Protocol.
  * This class handles the communication between the debugging client (IDE) and the Minecraft server,
@@ -91,6 +93,7 @@ public class WebSocketServer extends Endpoint {
     public void onClose(Session session, CloseReason closeReason) {
         logger.info("WebSocket closed: {}", closeReason);
         BreakPointCommand.clear();
+        continueExec(DebuggerState.get().getCommandSource());
         cleanup();
     }
 
