@@ -3,6 +3,8 @@ package net.gunivers.sniffer.mixin;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.gunivers.sniffer.command.FunctionTextLoader;
+import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.command.SourcedCommandAction;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
@@ -13,15 +15,13 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import net.gunivers.sniffer.EncapsulationBreaker;
-import net.gunivers.sniffer.command.FunctionTextLoader;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static net.minecraft.server.function.CommandFunction.validateCommandLength;
 import static net.minecraft.server.function.CommandFunction.parse;
+import static net.minecraft.server.function.CommandFunction.validateCommandLength;
 
 /**
  * @author theogiraudet
@@ -66,7 +66,7 @@ public interface CommandFunctionMixin {
 
         for (int i = 0; i < lines.size(); ++i) {
             int j = i + 1;
-            String string = ((String) lines.get(i)).trim();
+            String string = lines.get(i).trim();
             String string3;
             if (continuesToNextLine(string)) {
                 StringBuilder stringBuilder = new StringBuilder(string);
@@ -78,7 +78,7 @@ public interface CommandFunctionMixin {
                     }
 
                     stringBuilder.deleteCharAt(stringBuilder.length() - 1);
-                    String string2 = ((String) lines.get(i)).trim();
+                    String string2 = lines.get(i).trim();
                     stringBuilder.append(string2);
                     validateCommandLength(stringBuilder);
                 } while (continuesToNextLine(stringBuilder));
@@ -106,8 +106,14 @@ public interface CommandFunctionMixin {
                 } else {
                     try {
                         SourcedCommandAction<T> action = parse(dispatcher, source, stringReader);
-                        EncapsulationBreaker.callFunction(action, "setSourceFunction", id.toString());
-                        EncapsulationBreaker.callFunction(action, "setSourceLine", j - 1);
+                        ReflectUtil.invoke(action, "setSourceFunction", id.toString())
+                                .onFailure(msg -> {
+                                    throw new IllegalArgumentException(msg);
+                                });
+                        ReflectUtil.invoke(action, "setSourceLine", j - 1)
+                                .onFailure(msg -> {
+                                    throw new IllegalArgumentException(msg);
+                                });
                         functionBuilder.addAction(action);
                     } catch (CommandSyntaxException commandSyntaxException) {
                         throw new IllegalArgumentException("Whilst parsing command on line " + j + ": " + commandSyntaxException.getMessage());

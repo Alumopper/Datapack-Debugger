@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '1.7-SNAPSHOT'
+	id 'fabric-loom' version '1.11-SNAPSHOT'
 	id 'maven-publish'
 }
 
@@ -32,6 +32,8 @@ loom {
 		}
 	}
 
+//	log4jConfigs.from(file("log4j.xml"))
+
 }
 
 dependencies {
@@ -51,10 +53,10 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-key-binding-api-v1:${project.fabric_version}"
 	
 	// Added Cloth Config and ModMenu
-	modApi("me.shedaniel.cloth:cloth-config-fabric:17.0.144") {
+	modApi("me.shedaniel.cloth:cloth-config-fabric:20.0.148") {
 		exclude(group: "net.fabricmc.fabric-api")
 	}
-	modImplementation("com.terraformersmc:modmenu:13.0.2")
+	modImplementation("com.terraformersmc:modmenu:16.0.0-rc.1")
 }
 
 processResources {

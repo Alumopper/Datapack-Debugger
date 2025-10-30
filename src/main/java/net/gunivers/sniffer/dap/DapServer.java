@@ -15,7 +15,7 @@ import net.gunivers.sniffer.command.FunctionTextLoader;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-import static net.gunivers.sniffer.Utils.addSnifferPrefix;
+import static net.gunivers.sniffer.util.Utils.addSnifferPrefix;
 import static net.gunivers.sniffer.command.BreakPointCommand.continueExec;
 
 /**
@@ -69,10 +69,6 @@ public class DapServer implements IDebugProtocolServer {
         Capabilities capabilities = new Capabilities();
         capabilities.setSupportsConfigurationDoneRequest(true);
         // capabilities.setSupportsBreakpointLocationsRequest(true);
-
-        // Register event handlers
-        debuggerState.onStop(this::onStop);
-        debuggerState.onContinue(this::onContinue);
 
         LOGGER.debug("Sending capabilities response: {}", capabilities);
         return CompletableFuture.completedFuture(capabilities).thenApply(capabilities1 -> {

@@ -162,7 +162,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
     public void visitCompound(NbtCompound compound) {
         var children = new LinkedList<DebuggerVariable>();
         var compoundIndex = this.index++;
-        var compoundVar = new DebuggerVariable(compoundIndex, this.currentName, compound.asString(), children, isRoot);
+        var compoundVar = new DebuggerVariable(compoundIndex, this.currentName, compound.asString().orElse(null), children, isRoot);
         isRoot = false;
         variables.put(compoundIndex, compoundVar);
         for(var key: compound.getKeys()) {
@@ -187,15 +187,16 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      *
      * @param list The NBT list or array to convert
      */
-    private void convertList(AbstractNbtList<?> list) {
+    private void convertList(AbstractNbtList list) {
         var arrayIndex = index++;
         var array = new LinkedList<DebuggerVariable>();
         var name = currentName;
-        var result = new DebuggerVariable(arrayIndex, name, list.asString(), array, false);
+        var result = new DebuggerVariable(arrayIndex, name, list.asString().orElse(null), array, false);
         variables.put(arrayIndex, result);
         for(int i = 0; i < list.size(); i++) {
             currentName = Integer.toString(index);
-            list.get(i).accept(this);
+            //method_10534(int i) = get(int i)
+            list.method_10534(i).accept(this);
             array.add(returnVariable);
         }
         index++;
@@ -210,7 +211,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      */
     private void convertPrimitive(NbtElement element) {
         var i = index++;
-        returnVariable = new DebuggerVariable(i, currentName, element.asString(), List.of(), isRoot);
+        returnVariable = new DebuggerVariable(i, currentName, element.asString().orElse(null), List.of(), isRoot);
         variables.put(i, returnVariable);
     }
 }

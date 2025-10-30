@@ -1,28 +1,30 @@
 package net.gunivers.sniffer.command;
 
 import com.google.common.collect.Queues;
-import com.mojang.brigadier.arguments.*;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.gunivers.sniffer.DatapackDebugger;
+import net.gunivers.sniffer.dap.DebuggerState;
+import net.gunivers.sniffer.dap.ScopeManager;
+import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.command.CommandExecutionContext;
-
-import static net.gunivers.sniffer.Utils.addSnifferPrefix;
-import static net.minecraft.server.command.CommandManager.literal;
-import static net.minecraft.server.command.CommandManager.argument;
-
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.text.TextColor;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import net.gunivers.sniffer.DatapackDebugger;
-import net.gunivers.sniffer.dap.DebuggerState;
-import net.gunivers.sniffer.dap.ScopeManager;
 
 import java.util.Deque;
+
+import static net.gunivers.sniffer.util.Utils.addSnifferPrefix;
+import static net.minecraft.server.command.CommandManager.argument;
+import static net.minecraft.server.command.CommandManager.literal;
 
 /**
  * Main command handler for the datapack debugging system.
@@ -173,7 +175,7 @@ public class BreakPointCommand {
                                     var t = Text.literal(stack.getFunction());
                                     var style = t.getStyle();
                                     if(stacks.indexOf(stack) == 0){
-                                        style = style.withBold(true);
+                                        style = style.withBold(true).withColor(TextColor.parse("aqua").getOrThrow());
                                     }else {
                                         style = style.withBold(false);
                                     }
@@ -240,40 +242,30 @@ public class BreakPointCommand {
         isDebugCommand = true;
         moveSteps = steps;
         CommandExecutionContext<?> context = null;
-        try {
-            while (moveSteps > 0) {
-                context = storedCommandExecutionContext.peekFirst();
-                if (context != null) {
-                    var cls = context.getClass();
-                    var method = cls.getDeclaredMethod("onStep");
-                    method.setAccessible(true);
-                    method.invoke(context);
-                    if (moveSteps != 0) {
-                        storedCommandExecutionContext.pollFirst().close();
-                    }else {
-                        var method1 = cls.getDeclaredMethod("ifContainsCommandAction");
-                        method1.setAccessible(true);
-                        boolean result = (boolean) method1.invoke(context);
-                        if(!result){
-                            storedCommandExecutionContext.pollFirst().close();
-                        }
-                        break;
-                    }
-                } else {
-                    source.sendFeedback(() -> addSnifferPrefix(Text.translatable("sniffer.commands.breakpoint.step.over").formatted(Formatting.WHITE)), false);
-                    continueExec(source);
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.error(e.getMessage(), e);
-        } finally {
-            isDebugCommand = false;
+        while (moveSteps > 0) {
+            context = storedCommandExecutionContext.peekFirst();
             if (context != null) {
-                try {
-                    context.close();
-                } catch (Exception e) {
-                    LOGGER.error(e.getMessage());
+                ReflectUtil.invoke(context, "onStep").onFailure(LOGGER::error);
+                if (moveSteps != 0) {
+                    storedCommandExecutionContext.pollFirst().close();
+                }else {
+                    var result = (boolean) ReflectUtil.invoke(context, "ifContainsCommandAction").onFailure(LOGGER::error).getData();
+                    if(!result){
+                        storedCommandExecutionContext.pollFirst().close();
+                    }
+                    break;
                 }
+            } else {
+                source.sendFeedback(() -> addSnifferPrefix(Text.translatable("sniffer.commands.breakpoint.step.over").formatted(Formatting.WHITE)), false);
+                continueExec(source);
+            }
+        }
+        isDebugCommand = false;
+        if (context != null) {
+            try {
+                context.close();
+            } catch (Exception e) {
+                LOGGER.error(e.getMessage());
             }
         }
     }
@@ -313,10 +305,10 @@ public class BreakPointCommand {
             return null;
         }
         try {
-            var cls = context.getClass();
-            var method = cls.getDeclaredMethod("getKey", String.class);
-            method.setAccessible(true);
-            return (Pair<NbtElement, Boolean>) method.invoke(context, key);
+            //noinspection unchecked
+            return (Pair<NbtElement, Boolean>) ReflectUtil.invoke(context, "getKey", key)
+                    .onFailure(LOGGER::error)
+                    .getDataOrElse(null);
         }catch (Exception e){
             LOGGER.error(e.toString());
             source.sendError(Text.translatable("sniffer.commands.breakpoint.get.fail.error", e.toString()));

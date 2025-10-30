@@ -1,5 +1,6 @@
 package net.gunivers.sniffer.dap;
 
+import com.google.common.base.Suppliers;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import org.jetbrains.annotations.Nullable;
@@ -7,6 +8,7 @@ import net.minecraft.util.Identifier;
 
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Supplier;
 
 /**
  * Manager for debug scopes in the debugger.
@@ -54,26 +56,49 @@ public class ScopeManager {
         private final RealPath path;
         private final AbstractServerCommandSource<?> executor;
         private int line = -2;
-        private final Map<Integer, DebuggerVariable> variables;
+        private final Supplier<Map<Integer, DebuggerVariable>> variables;
         private final int id = ID++;
         private final DebugScope parent;
 
         /**
-         * Creates a new debug scope.
+         * Creates a new debug scope for a macro
          * 
          * @param parent The parent scope, or null if this is the root scope
          * @param function The function mcpath being executed
          * @param executor The command source executing the function
+         * @param macroVariables The NBT compound containing macro variables
          */
-        protected DebugScope(@Nullable DebugScope parent, String function, AbstractServerCommandSource<?> executor, NbtCompound macroVariables) {
+        protected DebugScope(@Nullable DebugScope parent, String function, AbstractServerCommandSource<?> executor,@Nullable NbtCompound macroVariables) {
             this.parent = parent;
             this.function = function;
             this.path = PATHS.get(function);
             this.executor = executor;
-            this.variables = VariableManager.convertCommandSource(executor, ID);
-            var macro = VariableManager.convertNbtCompound("macro", macroVariables, ID + this.variables.size(), true);
-            this.variables.putAll(macro);
-            ID += variables.size();
+            this.variables = Suppliers.memoize(() -> {
+                var qwq = VariableManager.convertCommandSource(executor, ID);
+                var macro = VariableManager.convertNbtCompound("macro", macroVariables, ID + qwq.size(), true);
+                qwq.putAll(macro);
+                ID += qwq.size();
+                return qwq;
+            });
+        }
+
+        /**
+         * Creates a new debug scope for a normal function
+         *
+         * @param parent The parent scope, or null if this is the root scope
+         * @param function The function mcpath being executed
+         * @param executor The command source executing the function
+         */
+        protected DebugScope(@Nullable DebugScope parent, String function, AbstractServerCommandSource<?> executor) {
+            this.parent = parent;
+            this.function = function;
+            this.path = PATHS.get(function);
+            this.executor = executor;
+            this.variables = Suppliers.memoize(() -> {
+                var qwq = VariableManager.convertCommandSource(executor, ID);
+                ID += qwq.size();
+                return qwq;
+            });
         }
 
         /**
@@ -118,7 +143,7 @@ public class ScopeManager {
          * @return A list of all variables in this scope
          */
         public List<DebuggerVariable> getVariables() {
-            return List.copyOf(variables.values());
+            return List.copyOf(variables.get().values());
         }
 
         /**
@@ -145,7 +170,7 @@ public class ScopeManager {
          * @return A list of root variables
          */
         public List<DebuggerVariable> getRootVariables() {
-            return this.variables.values().stream().filter(DebuggerVariable::isRoot).toList();
+            return this.variables.get().values().stream().filter(DebuggerVariable::isRoot).toList();
         }
 
         /**
@@ -204,6 +229,13 @@ public class ScopeManager {
         this.currentScope = scope;
     }
 
+    public void newScope(String function, AbstractServerCommandSource<?> executor) {
+        var scope = new DebugScope(this.currentScope, function, executor);
+        this.scopeIds.add(scope.id);
+        this.debugScopeStack.push(scope);
+        this.currentScope = scope;
+    }
+
     /**
      * Removes the current scope from the stack and sets the parent as current.
      * Call this when exiting a function.
@@ -224,6 +256,13 @@ public class ScopeManager {
      */
     public int count() {
         return this.debugScopeStack.size();
+    }
+
+    /**
+     * If the scope stack is empty.
+     */
+    public boolean isEmpty(){
+        return this.debugScopeStack.isEmpty();
     }
 
     /**
@@ -263,7 +302,7 @@ public class ScopeManager {
      * @return A list of root-level variables in this scope
      */
     private List<DebuggerVariable> getRootVariables(DebugScope scope) {
-        return scope.variables.values().stream().filter(DebuggerVariable::isRoot).toList();
+        return scope.variables.get().values().stream().filter(DebuggerVariable::isRoot).toList();
     }
 
     /**

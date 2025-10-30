@@ -3,7 +3,7 @@ package net.gunivers.sniffer.mixin;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.brigadier.CommandDispatcher;
-import net.gunivers.sniffer.EncapsulationBreaker;
+import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.command.SourcedCommandAction;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.MacroException;
@@ -63,13 +63,13 @@ public class VariableLineMixin<T extends AbstractServerCommandSource<T>> {
      * @param id The function identifier
      * @param original The original operation being wrapped
      * @return The modified command action with source information attached
-     * @throws MacroException If there's an error instantiating the command
      */
     @WrapMethod(method = "instantiate")
     SourcedCommandAction<T> instantiate(List<String> args, CommandDispatcher<T> dispatcher, Identifier id, Operation<SourcedCommandAction<T>> original) throws MacroException {
         var result = original.call(args, dispatcher, id);
-        EncapsulationBreaker.callFunction(result, "setSourceFunction", id.toString());
-        EncapsulationBreaker.getAttribute(this, "line").ifPresent(line -> EncapsulationBreaker.callFunction(result, "setSourceLine", line));
+        ReflectUtil.invoke(result, "setSourceFunction", id.toString());
+        int line = ReflectUtil.getT(this, "line", int.class).getData();
+        ReflectUtil.invoke(result, "setSourceLine", line);
         return result;
     }
 }
