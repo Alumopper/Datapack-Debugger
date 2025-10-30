@@ -1,30 +1,37 @@
 {
 	"schemaVersion": 1,
-	"id": "datapack-debugger",
-	"version": "1.1.2",
-	"name": "Datapack Debugger",
-	"description": "A mod implements breakpoint functionality to datapack development.",
+	"id": "sniffer",
+	"version": "${version}",
+	"name": "Sniffer",
+	"description": "A mod that allows debugging datapacks with breakpoints.",
 	"authors": [
+		"Gunivers",
+		"theogiraudet",
 		"Alumopper"
 	],
 	"contact": {
-		"sources": "https://github.com/Alumopper/Datapack-Debugger"
+		"homepage": "https://github.com/Gunivers/sniffer",
+		"sources": "https://github.com/Gunivers/sniffer",
+		"issues": "https://github.com/Gunivers/sniffer/issues"
 	},
-	"license": "CC0-1.0",
-	"icon": "assets/datapack-debugger/icon.png",
+	"license": "MPL-2.0",
+	"icon": "assets/sniffer/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"top.mcfpp.mod.debugger.DatapackDebugger"
+          "net.gunivers.sniffer.DatapackDebugger"
 		],
 		"client": [
-			"top.mcfpp.mod.debugger.DatapackBreakpointClient"
+          "net.gunivers.sniffer.DatapackBreakpointClient"
+		],
+		"modmenu": [
+          "net.gunivers.sniffer.config.ModMenuIntegration"
 		]
 	},
 	"mixins": [
-		"datapack-debugger.mixins.json",
+		"sniffer.mixins.json",
 		{
-			"config": "datapack-debugger.client.mixins.json",
+			"config": "sniffer.client.mixins.json",
 			"environment": "client"
 		}
 	],
@@ -32,8 +39,11 @@
 		"fabricloader": ">=0.15.11",
 		"minecraft": "~1.21",
 		"java": ">=21",
-		"fabric-api": "*"
+		"fabric-api": "*",
+		"cloth-config": ">=17.0.144"
 	},
-	"suggests": {},
-	"accessWidener": "datapack-debugger.accesswidener"
+	"suggests": {
+		"modmenu": ">=13.0.2"
+	},
+	"accessWidener": "sniffer.accesswidener"
 }

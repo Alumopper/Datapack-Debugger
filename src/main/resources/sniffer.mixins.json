@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "package": "net.gunivers.sniffer.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "CommandExecutionContextMixin",
+    "CommandFunctionActionMixin",
+    "CommandFunctionMixin",
+    "DirectoryResourcePackMixin",
+    "ExpandedMacroMixin",
+    "FixCommandActionMixin",
+    "FrameMixin",
+    "FunctionBuilderMixin",
+    "MacroMixin",
+    "SingleCommandActionSourcedMixin",
+    "VariableLineMixin",
+    "ZipResourcePackMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+	}
+}
