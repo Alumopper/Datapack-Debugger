@@ -48,6 +48,6 @@ public class FunctionOutAction<T extends AbstractServerCommandSource<T>> impleme
     public void execute(T source, CommandExecutionContext<T> context, Frame frame) {
         ScopeManager.get().unscope();
         // BreakPointCommand.stepDepth - 1 because we only want to decrement if we go higher than the stepDepth
-        if(BreakPointCommand.moveSteps > 0 && isStepOut() && frame.depth() - 1 <= BreakPointCommand.stepDepth - 1) BreakPointCommand.moveSteps --;
+        if(BreakPointCommand.isDebugging && BreakPointCommand.moveSteps > 0 && isStepOut() && frame.depth() - 1 <= BreakPointCommand.stepDepth - 1) BreakPointCommand.moveSteps --;
     }
 }

@@ -4,6 +4,7 @@ import net.minecraft.command.SourcedCommandAction;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.ExpandedMacro;
+import net.minecraft.server.function.Macro;
 import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -40,6 +41,10 @@ public class ExpandedMacroMixin<T extends AbstractServerCommandSource<T>> {
     @Unique
     private Identifier functionIdentifier;
 
+    /** The original macro this function is resolved from */
+    @Unique
+    private Macro<T> originalMacro;
+
     /**
      * Injects function entry and exit actions into the macro's command list.
      * This allows the debugger to track when a macro is entered and exited,
@@ -49,6 +54,7 @@ public class ExpandedMacroMixin<T extends AbstractServerCommandSource<T>> {
      */
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
+        //noinspection unchecked
         final var THIS = (ExpandedMacro<T>) (Object) this;
         entries.addFirst(new FunctionInAction<>(THIS));
         entries.add(new FunctionOutAction<>(THIS));

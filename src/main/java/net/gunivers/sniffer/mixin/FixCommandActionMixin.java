@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.gunivers.sniffer.command.BreakPointCommand;
 
-import static net.gunivers.sniffer.Utils.addSnifferPrefix;
+import static net.gunivers.sniffer.util.Utils.addSnifferPrefix;
 import static net.gunivers.sniffer.command.StepType.isStepOut;
 
 /**
@@ -42,7 +42,8 @@ public class FixCommandActionMixin<T extends AbstractServerCommandSource<T>> {
      * @param frame The execution frame
      * @param ci The callback info
      */
-    @Inject(method = "execute(Lnet/minecraft/server/command/AbstractServerCommandSource;Lnet/minecraft/command/CommandExecutionContext;Lnet/minecraft/command/Frame;)V", at = @At("HEAD"))
+    @Inject(method = "execute(Lnet/minecraft/server/command/AbstractServerCommandSource;Lnet/minecraft/command/CommandExecutionContext;Lnet/minecraft/command/Frame;)V",
+            at = @At("HEAD"))
     private void execute(T abstractServerCommandSource, CommandExecutionContext<T> commandExecutionContext, Frame frame, CallbackInfo ci) {
         if(frame.depth() == 0)
             return;

@@ -26,7 +26,6 @@ import java.util.Map;
  */
 public class VariableManager {
 
-
     /**
      * Converts a command source into a map of debugger variables.
      * This method extracts relevant information from the command source such as
@@ -38,6 +37,7 @@ public class VariableManager {
      */
     public static Map<Integer, DebuggerVariable> convertCommandSource(AbstractServerCommandSource<?> source, int startIndex) {
         if(source instanceof ServerCommandSource commandSource) {
+            //if executor is an entity
             var executorVariable = convertEntityVariables(commandSource.getEntity(), startIndex, true);
             var currentIndex = executorVariable.getRight();
 
@@ -74,7 +74,10 @@ public class VariableManager {
      */
     private static Pair<DebuggerVariable, Integer> convertEntityVariables(@Nullable Entity entity, int startIndex, boolean isRoot) {
         if(entity == null) {
-            return new Pair<>(new DebuggerVariable(startIndex, "executor", "server", List.of(), isRoot), ++startIndex);
+            return new Pair<>(
+                    new DebuggerVariable(startIndex, "executor", "server", List.of(), isRoot),
+                    ++startIndex
+            );
         }
 
         var id = startIndex + 1;
@@ -84,7 +87,7 @@ public class VariableManager {
 
         var objectUuid = new DebuggerVariable(id++, "uuid", entity.getUuidAsString(), List.of(), false);
 
-        var pos = convertPos(entity.getPos(), id, false);
+        var pos = convertPos(entity.getEntityPos(), id, false);
         id = pos.getRight();
 
         var rot = convertRotation(entity.getRotationClient(), id, false);
@@ -97,7 +100,6 @@ public class VariableManager {
         var children = List.of(objectType, objectName, objectUuid, pos.getLeft(), rot.getLeft(), objectDimension);
         return new Pair<>(new DebuggerVariable(startIndex, "executor", displayName, children, isRoot), id);
     }
-
 
     /**
      * Converts an entity type to a readable string representation.
@@ -197,7 +199,7 @@ public class VariableManager {
      * @param isRoot Whether this variable is a root-level variable
      * @return A map of variable IDs to debugger variables, or an empty map if compound is null
      */
-    public static Map<Integer, DebuggerVariable> convertNbtCompound(String name, NbtCompound compound, int startIndex, boolean isRoot) {
+    public static Map<Integer, DebuggerVariable> convertNbtCompound(String name, @Nullable NbtCompound compound, int startIndex, boolean isRoot) {
         if(compound != null) {
             var visitor = new NbtElementVariableVisitor(startIndex, name, isRoot);
             compound.accept(visitor);

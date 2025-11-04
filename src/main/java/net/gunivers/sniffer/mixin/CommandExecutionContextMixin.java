@@ -1,6 +1,7 @@
 package net.gunivers.sniffer.mixin;
 
 import net.gunivers.sniffer.command.FunctionInAction;
+import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.command.*;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -18,7 +19,6 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import net.gunivers.sniffer.EncapsulationBreaker;
 import net.gunivers.sniffer.command.FunctionOutAction;
 import net.gunivers.sniffer.dap.DebuggerState;
 import net.gunivers.sniffer.dap.ScopeManager;
@@ -58,7 +58,8 @@ abstract public class CommandExecutionContextMixin<T> {
     @Shadow private int currentDepth;
     @Shadow protected abstract void queuePendingCommands();
 
-    @Shadow private static <T extends AbstractServerCommandSource<T>> Frame frame(CommandExecutionContext<T> context, ReturnValueConsumer returnValueConsumer){return null;}
+    @SuppressWarnings("DataFlowIssue")
+    @Shadow @NotNull private static <T extends AbstractServerCommandSource<T>> Frame frame(CommandExecutionContext<T> context, ReturnValueConsumer returnValueConsumer){return null;}
 
     /**
      * Holds the next command that will be executed in the current context.
@@ -88,13 +89,9 @@ abstract public class CommandExecutionContextMixin<T> {
     ) {
         // Create a new frame for the procedure call
         Frame frame = frame(context, returnValueConsumer);
-        try {
-            // Use EncapsulationBreaker instead of reflection
-            EncapsulationBreaker.getAttribute(frame, "function")
-                    .ifPresent(ignored -> EncapsulationBreaker.callFunction(frame, "setFunction", procedure));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        ReflectUtil.set(frame, "function", Procedure.class, procedure)
+                .onFailure(e -> LOGGER.error("Failed to set function in frame for procedure call: {}", e)
+        );
         // Add the command to the queue with the modified frame
         context.enqueueCommand(
                 new CommandQueueEntry<>(frame, new CommandFunctionAction<>(procedure, source.getReturnValueConsumer(), false).bind(source))
@@ -110,6 +107,7 @@ abstract public class CommandExecutionContextMixin<T> {
      */
     @Inject(method = "run()V", at = @At("HEAD"), cancellable = true)
     private void onRun(CallbackInfo ci){
+        //noinspection unchecked
         final var THIS = (CommandExecutionContext<T>) (Object) this;
 
         // Process pending commands before starting the main loop
@@ -169,6 +167,7 @@ abstract public class CommandExecutionContextMixin<T> {
      */
     @Unique
     private void onStep() {
+        //noinspection unchecked
         final var THIS = (CommandExecutionContext<T>) (Object) this;
 
         // Process pending commands before starting the step
@@ -314,7 +313,13 @@ abstract public class CommandExecutionContextMixin<T> {
 
         var function = this.getNextCommand(commandQueueEntry);
 
-        var lineOpt = function.flatMap(fun -> EncapsulationBreaker.getAttribute(fun, "sourceLine"));
+        var lineOpt = function.flatMap(fun -> {
+            if(fun instanceof SingleCommandAction.Sourced<?>){
+                return ReflectUtil.getT(fun, "sourceLine", int.class).onFailure(LOGGER::error).toOptional();
+            }else{
+                return Optional.empty();
+            }
+        });
         if (lineOpt.isEmpty()) {
             return false;
         }
@@ -353,11 +358,9 @@ abstract public class CommandExecutionContextMixin<T> {
             if(nextCommand instanceof FunctionOutAction<?> || nextCommand instanceof FunctionInAction<?>) {
                 shouldPause = false;
             } else {
-                var lineOpt =  EncapsulationBreaker.getAttribute(nextCommand, "sourceLine");
-                if(lineOpt.isPresent()) {
-                    var line = (int) lineOpt.get();
-                    ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line));
-                }
+                ReflectUtil.getT(nextCommand, "sourceLine", int.class).onFailure(LOGGER::error).onSuccess(line ->
+                        ScopeManager.get().getCurrentScope().ifPresent(scope -> scope.setLine(line))
+                );
             }
         }
 
@@ -391,7 +394,7 @@ abstract public class CommandExecutionContextMixin<T> {
             return Optional.empty();
         }
 
-        var index = (int) EncapsulationBreaker.getAttribute(steppedAction, "nextActionIndex").get();
+        int index = ReflectUtil.getT(steppedAction, "nextActionIndex", int.class).getData();
         if(index < 0) {
             return Optional.empty();
         }
@@ -403,29 +406,23 @@ abstract public class CommandExecutionContextMixin<T> {
 
     /**
      * Gets the expanded macro from a frame using reflection.
-     * This method uses EncapsulationBreaker to access private fields in the Frame object.
      * 
      * @param frame The frame to get the macro from
      * @return The expanded macro, or null if an error occurred
      */
     @Unique
     private ExpandedMacro<?> getExpandedMacroFromFrame(Frame frame) {
-        try {
-            return (ExpandedMacro<?>) EncapsulationBreaker.getAttribute(frame, "function").get();
-        } catch (Exception e) {
-            LOGGER.error("Failed to get expanded macro from frame: {}", e.getMessage());
-            return null;
-        }
+        return ReflectUtil.getT(frame, "function", ExpandedMacro.class).onFailure(LOGGER::error).getDataOrElse(null);
     }
 
     /**
      * Retrieves the expanded macro and its arguments from a command queue entry.
      * This method extracts function information and arguments from a command entry.
-     * It uses EncapsulationBreaker to access private fields.
-     * 
+     *
      * @param commandQueueEntry The command queue entry
      * @return A pair containing the expanded macro and its arguments, or null if not available
      */
+    @SuppressWarnings({"unchecked"})
     @Unique
     private Pair<ExpandedMacro<T>, NbtCompound> getMacroAndArgsFromEntry(CommandQueueEntry<T> commandQueueEntry) {
         if (commandQueueEntry == null) {
@@ -434,17 +431,15 @@ abstract public class CommandExecutionContextMixin<T> {
 
         var frame = commandQueueEntry.frame();
         try {
-            // Use EncapsulationBreaker instead of reflection
-            var function = (ExpandedMacro<T>) EncapsulationBreaker.getAttribute(frame, "function").orElse(null);
+            var function = ReflectUtil.getT(frame, "function", ExpandedMacro.class).onFailure(LOGGER::error).getDataOrElse(null);
             
             if (function == null) {
                 return null;
             }
 
-            // Get the arguments using EncapsulationBreaker
-            var args = (NbtCompound) EncapsulationBreaker.getAttribute(function, "arguments").orElse(null);
+            var args = ReflectUtil.getT(function, "arguments", NbtCompound.class).onFailure(LOGGER::error).getDataOrElse(null);
 
-            return new Pair<>(function, args);
+            return new Pair<ExpandedMacro<T>, NbtCompound>(function, args);
         } catch (Exception e) {
             LOGGER.error("Failed to get macro and args: {}", e.getMessage());
             return null;
@@ -543,7 +538,7 @@ abstract public class CommandExecutionContextMixin<T> {
                 }
             }
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            LOGGER.error("Failed to check if action is fix command action: {}", e.getMessage());
         }
         return false;
     }

@@ -1,6 +1,9 @@
 package net.gunivers.sniffer.mixin;
 
 import com.mojang.logging.LogUtils;
+import net.gunivers.sniffer.dap.RealPath;
+import net.gunivers.sniffer.dap.ScopeManager;
+import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.resource.InputSupplier;
 import net.minecraft.resource.ResourcePack;
 import net.minecraft.resource.ResourceType;
@@ -10,16 +13,11 @@ import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import net.gunivers.sniffer.dap.RealPath;
-import net.gunivers.sniffer.dap.ScopeManager;
 
 import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-
-import static net.gunivers.sniffer.EncapsulationBreaker.callFunction;
-import static net.gunivers.sniffer.EncapsulationBreaker.getAttribute;
 
 /**
  * Mixin for the ZipResourcePack class to provide debugging capabilities.
@@ -50,7 +48,7 @@ public class ZipResourcePackMixin {
      */
     @Overwrite
     public void findResources(ResourceType type, String namespace, String prefix, ResourcePack.ResultConsumer consumer) {
-        var zipFileOpt = getAttribute(this, "zipFile").flatMap(obj -> callFunction(obj, "open"));
+        var zipFileOpt = ReflectUtil.getT(this, "zipFile").flatMap(obj -> ReflectUtil.invoke(obj, "open")).onFailure(LOGGER::error).toOptional();
         if (zipFileOpt.isPresent()) {
             var zipFile = (ZipFile) zipFileOpt.get();
             Enumeration<? extends ZipEntry> enumeration = zipFile.entries();
@@ -59,7 +57,7 @@ public class ZipResourcePackMixin {
             String string2 = string + prefix + "/";
 
             while(enumeration.hasMoreElements()) {
-                ZipEntry zipEntry = (ZipEntry)enumeration.nextElement();
+                ZipEntry zipEntry = enumeration.nextElement();
                 if (!zipEntry.isDirectory()) {
                     String string3 = zipEntry.getName();
                     if (string3.startsWith(string2)) {
