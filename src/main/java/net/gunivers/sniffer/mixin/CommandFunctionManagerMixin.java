@@ -17,17 +17,17 @@ public class CommandFunctionManagerMixin {
 
     @Shadow @Final private MinecraftServer server;
 
-    @Inject(method = "tick", at = @At("HEAD"))
-    public void beforeTick(CallbackInfo ci){
-        //TODO at every start of a tick, the stack should be empty
+//    @Inject(method = "tick", at = @At("HEAD"))
+//    public void beforeTick(CallbackInfo ci){
+//        //TODO at every start of a tick, the stack should be empty
 //        if(this.server.getTickManager().shouldTick()){
 //            ScopeManager.get().clear();
 //        }
-    }
+//    }
 
-    @Inject(method = "tick", at = @At("TAIL"))
-    public void afterTick(CallbackInfo ci) {
-        //TODO at the end of a tick, the stack should be empty too, or a leak has occurred
+//    @Inject(method = "tick", at = @At("TAIL"))
+//    public void afterTick(CallbackInfo ci) {
+//        //TODO at the end of a tick, the stack should be empty too, or a leak has occurred
 //        if(this.server.getTickManager().shouldTick()){
 //            if(!ScopeManager.get().isEmpty()){
 //                var scopes = new StringBuilder();
@@ -38,5 +38,5 @@ public class CommandFunctionManagerMixin {
 //                ScopeManager.get().clear();
 //            }
 //        }
-    }
+//    }
 }

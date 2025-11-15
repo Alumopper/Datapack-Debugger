@@ -1,11 +1,14 @@
 package net.gunivers.sniffer.util;
 
+import com.google.common.base.Suppliers;
 import com.mojang.logging.LogUtils;
 import net.minecraft.server.function.ExpandedMacro;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
+
+import java.util.function.Supplier;
 
 /**
  * Utility class providing helper methods for the Datapack Debugger.
@@ -37,6 +40,14 @@ public class Utils {
 
     public static Text addSnifferPrefix(String text) {
         return addSnifferPrefix(Text.literal(text).formatted(Formatting.WHITE));
+    }
+
+    public static <T> java.util.function.Supplier<T> lazy(com.google.common.base.Supplier<T> supplier) {
+        return Suppliers.memoize(supplier);
+    }
+
+    public static <T> java.util.function.Supplier<T> lazy(T value) {
+        return Suppliers.memoize(() -> value);
     }
 
 }

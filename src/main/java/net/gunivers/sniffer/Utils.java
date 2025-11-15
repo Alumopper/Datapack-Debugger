@@ -1,5 +1,6 @@
 package net.gunivers.sniffer;
 
+import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.server.function.ExpandedMacro;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -23,7 +24,7 @@ public class Utils {
      * @return The Identifier of the function, or a fallback identifier if not found
      */
     public static Identifier getId(ExpandedMacro<?> function) {
-        return (Identifier) EncapsulationBreaker.getAttribute(function, "functionIdentifier").orElse(Identifier.of("foo:bar"));
+        return ReflectUtil.getT(function, "functionIdentifier", Identifier.class).getDataOrElse(Identifier.of("foo:bar"));
     }
 
     private static final String MESSAGE_PREFIX = "[Sniffer] ";

@@ -59,7 +59,7 @@ public interface CommandFunctionMixin {
         FunctionTextLoader.put(id, lines);
         FunctionBuilder<T> functionBuilder;
         try {
-            functionBuilder = FunctionBuilder.class.getConstructor().newInstance();
+            functionBuilder = FunctionBuilder.class.getDeclaredConstructor().newInstance();
         } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
@@ -123,4 +123,6 @@ public interface CommandFunctionMixin {
         }
         return functionBuilder.toCommandFunction(id);
     }
+
+    
 }

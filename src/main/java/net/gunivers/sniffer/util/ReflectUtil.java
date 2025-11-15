@@ -133,7 +133,7 @@ public final class ReflectUtil {
     public static Result<?> get(Object object, String fieldName, Class<?> fieldType){
         var vh = findVarHandle(object.getClass(), fieldName, fieldType);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             return Result.success(vhGet(vh, object));
         }
@@ -148,7 +148,7 @@ public final class ReflectUtil {
     public static Result<?> get(Object object, String fieldName){
         var vh = findVarHandle(object.getClass(), fieldName);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             return Result.success(vhGet(vh, object));
         }
@@ -158,7 +158,7 @@ public final class ReflectUtil {
     public static <T> Result<T> getT(Object object, String fieldName, Class<T> fieldType) {
         var vh = findVarHandle(object.getClass(), fieldName, fieldType);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             return Result.success((T) vhGet(vh, object));
         }
@@ -168,7 +168,7 @@ public final class ReflectUtil {
     public static <T> Result<T> getT(Object object, String fieldName) {
         var vh = findVarHandle(object.getClass(), fieldName);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             return Result.success((T) vhGet(vh, object));
         }
@@ -195,7 +195,7 @@ public final class ReflectUtil {
     public static Result<?> set(Object object, String fieldName, Class<?> fieldType, Object value) {
         var vh = findVarHandle(object.getClass(), fieldName, fieldType);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             vhSet(vh, object, value);
             return Result.success();
@@ -205,7 +205,7 @@ public final class ReflectUtil {
     public static Result<?> set(Object object, String fieldName, Object value) {
         var vh = findVarHandle(object.getClass(), fieldName);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             vhSet(vh, object, value);
             return Result.success();
@@ -215,7 +215,7 @@ public final class ReflectUtil {
     public static <T> Result<?> setT(Object object, String fieldName, Class<T> fieldType, T value) {
         var vh = findVarHandle(object.getClass(), fieldName, fieldType);
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             vhSet(vh, object, value);
             return Result.success();
@@ -225,7 +225,7 @@ public final class ReflectUtil {
     public static <T> Result<?> setT(Object object, String fieldName, T value) {
         var vh = findVarHandle(object.getClass(), fieldName, value.getClass());
         if(vh == null){
-            return Result.failure("Field not found" + fieldName + " in " + object.getClass());
+            return Result.failure("Field not found" + fieldName + " in " + object.getClass(), ExceptionCode.FIELD_NOT_FOUND);
         }else{
             vhSet(vh, object, value);
             return Result.success();
@@ -286,7 +286,7 @@ public final class ReflectUtil {
             return Result.success(mh.invoke(args));
         } catch (Throwable t) {
             LOGGER.error("Error while invoking method: {}({})", mh, Arrays.toString(args), t);
-            return Result.failure(t.getMessage());
+            return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
         }
     }
 
@@ -295,7 +295,7 @@ public final class ReflectUtil {
             return Result.success(mh.invokeWithArguments(args));
         } catch (Throwable t) {
             LOGGER.error("Error while invoking method: {}({})", mh, Arrays.toString(args.toArray()), t);
-            return Result.failure(t.getMessage());
+            return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
         }
     }
 
@@ -309,10 +309,10 @@ public final class ReflectUtil {
                 return Result.success(handle.invokeWithArguments(qwq));
             } catch (Throwable t) {
                 LOGGER.error("Error while invoking method: {}({})", name, Arrays.toString(args), t);
-                return Result.failure(t.getMessage());
+                return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
             }
         }else{
-            return Result.failure("Method not found: " + name);
+            return Result.failure("Method not found: " + name, ExceptionCode.METHOD_NOT_FOUND);
         }
     }
 
@@ -326,10 +326,10 @@ public final class ReflectUtil {
                 return Result.success(handle.invokeWithArguments(qwq));
             } catch (Throwable t) {
                 LOGGER.error("Error while invoking method: {}({})", name, Arrays.toString(args), t);
-                return Result.failure(t.getMessage());
+                return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
             }
         }else{
-            return Result.failure("Method not found: " + name);
+            return Result.failure("Method not found: " + name, ExceptionCode.METHOD_NOT_FOUND);
         }
     }
 
@@ -340,10 +340,10 @@ public final class ReflectUtil {
                 return Result.success(handle.invoke(caller));
             } catch (Throwable t) {
                 LOGGER.error("Error while invoking method: {}()", name, t);
-                return Result.failure(t.getMessage());
+                return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
             }
         }else{
-            return Result.failure("Method not found: " + name);
+            return Result.failure("Method not found: " + name, ExceptionCode.METHOD_NOT_FOUND);
         }
     }
 
@@ -369,7 +369,7 @@ public final class ReflectUtil {
                 );
                 return cs.getTarget().invoke();
             } catch (Throwable t) {
-                return Result.failure(t.getMessage());
+                return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
             }
         }));
     }
