@@ -35,11 +35,18 @@ public final class ReflectUtil {
     private static final MethodHandles.Lookup PUBLIC_LOOKUP = MethodHandles.lookup();
     private static final Map<String, VarHandle> VAR_HANDLE_CACHE = new ConcurrentHashMap<>();
     private static final Map<String, MethodHandle> MH_HANDLE_CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, MethodHandle> CONSTRUCTOR_HANDLE_CACHE = new ConcurrentHashMap<>();
     private static final Map<String, Object> LAMBDA_CACHE = new ConcurrentHashMap<>();
 
     private static String key(Class<?> c, String name, Class<?>... types) {
         StringBuilder sb = new StringBuilder(c.getName()).append('#').append(name);
         for (Class<?> t : types) sb.append(':').append(t == null ? "null" : t.getName());
+        return sb.toString();
+    }
+
+    private static String keyConstructor(Class<?> target, Class<?>... paramTypes) {
+        StringBuilder sb = new StringBuilder(target.getName()).append("#<init>");
+        for (Class<?> t : paramTypes) sb.append(':').append(t == null ? "null" : t.getName());
         return sb.toString();
     }
 
@@ -382,4 +389,32 @@ public final class ReflectUtil {
     }
 
     //endregion
+
+    @Nullable
+    private static MethodHandle findConstructorHandle(Class<?> target, Class<?>... paramTypes) {
+        String k = keyConstructor(target, paramTypes);
+        return CONSTRUCTOR_HANDLE_CACHE.computeIfAbsent(k, kk -> {
+            try {
+                MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(target, PUBLIC_LOOKUP);
+                return lookup.findConstructor(target, MethodType.methodType(void.class, paramTypes));
+            } catch (ReflectiveOperationException e) {
+                LOGGER.error("Failed to find constructor for class {} with params {}", target, Arrays.toString(paramTypes), e);
+                return null;
+            }
+        });
+    }
+
+    public static <T> Result<T> newInstance(Class<T> target, Object... args) {
+        Class<?>[] paramTypes = Arrays.stream(args).map(arg -> arg == null ? Object.class : arg.getClass()).toArray(Class<?>[]::new);
+        MethodHandle ctor = findConstructorHandle(target, paramTypes);
+        if (ctor == null) {
+            return Result.failure("Constructor not found for " + target + " with params " + Arrays.toString(paramTypes), ExceptionCode.CONSTRUCTOR_NOT_FOUND);
+        }
+        try {
+            return Result.success((T) ctor.invokeWithArguments(args));
+        } catch (Throwable t) {
+            LOGGER.error("Error while invoking constructor for class {} with args {}", target, Arrays.toString(args), t);
+            return Result.failure(t.getMessage(), ExceptionCode.METHOD_INVOKE_EXCEPTION);
+        }
+    }
 }

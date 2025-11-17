@@ -5,9 +5,14 @@ import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.command.*;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.AbstractServerCommandSource;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.function.ExpandedMacro;
 import net.minecraft.server.function.Procedure;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
+import net.minecraft.text.TextColor;
 import net.minecraft.util.Pair;
 import net.minecraft.util.profiler.Profiler;
 import org.jetbrains.annotations.NotNull;
@@ -99,6 +104,43 @@ abstract public class CommandExecutionContextMixin<T> {
         ci.cancel();
     }
 
+    @Unique
+    private void sendOverflowMessage(){
+        LOGGER.info("Command execution stopped due to limit (executed {} commands)", this.maxCommandChainLength);
+        MutableText text = Text.literal("Command execution stopped due to limit (executed " + this.maxCommandChainLength + " commands)")
+                .withColor(TextColor.parse("red").getOrThrow().getRgb());
+        text.append("\n");
+        text.append("Stack trace:").append("\n");
+        int stackCount = 0;
+        var stacks = ScopeManager.get().getDebugScopes();
+        MinecraftServer server = null;
+        for (var stack : stacks) {
+            var t = Text.literal(stack.getFunction());
+            var style = t.getStyle();
+            if(stacks.indexOf(stack) == 0){
+                style = style.withBold(true).withColor(TextColor.parse("aqua").getOrThrow());
+                if(stack.getExecutor() instanceof ServerCommandSource source){
+                    server = source.getServer();
+                }
+            }else {
+                style = style.withBold(false);
+            }
+            t.setStyle(style);
+            text = text.append(t);
+            text.append("\n");
+            stackCount++;
+            if(stackCount >= 10) {
+                text.append("... (" + (stacks.size() - stackCount) + " more)");
+                break;
+            }
+        }
+        LOGGER.error(text.getLiteralString());
+        if(server != null){
+            MutableText finalText = text;
+            server.getPlayerManager().getPlayerList().forEach(player -> player.sendMessage(finalText));
+        }
+    }
+
     /**
      * Injects code to handle command execution during debugging.
      * This method manages the command queue and handles breakpoints.
@@ -116,7 +158,7 @@ abstract public class CommandExecutionContextMixin<T> {
         while (true) {
             // Check if we've hit the command execution limit
             if (this.commandsRemaining <= 0) {
-                LOGGER.info("Command execution stopped due to limit (executed {} commands)", this.maxCommandChainLength);
+                sendOverflowMessage();
                 break;
             }
 
@@ -143,7 +185,7 @@ abstract public class CommandExecutionContextMixin<T> {
             
             // Check for queue overflow
             if (this.queueOverflowed) {
-                LOGGER.error("Command execution stopped due to command queue overflow (max {})", 10000000);
+                sendOverflowMessage();
                 break;
             }
 
