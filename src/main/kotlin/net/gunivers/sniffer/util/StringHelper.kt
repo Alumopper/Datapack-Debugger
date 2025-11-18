@@ -42,12 +42,14 @@ object StringHelper {
         }
     }
 
+    @JvmStatic
     fun StringReader.backUtil(stop: Char){
         while(this.canRead() && this.peek() != stop){
             this.cursor--
         }
     }
 
+    @JvmStatic
     fun StringReader.readWord(): String{
         val start = this.cursor
         while(this.canRead() && !this.peek().isWhitespace()){
@@ -56,6 +58,7 @@ object StringHelper {
         return this.string.substring(start, this.cursor)
     }
 
+    @JvmStatic
     fun StringReader.readUntil(stop: Char): String {
         val start = this.cursor
         while(this.canRead() && this.peek() != stop){
@@ -64,8 +67,10 @@ object StringHelper {
         return this.string.substring(start, this.cursor)
     }
 
+    @JvmStatic
     fun StringReader.test(): StringReaderTester = StringReaderTester(this)
 
+    @JvmStatic
     fun StringReader.test(expected: (StringReader) -> Boolean): Boolean {
         val curr = this.cursor
         val qwq = expected(this)
@@ -73,17 +78,20 @@ object StringHelper {
         return qwq
     }
 
+    @JvmStatic
     fun StringReader.test(expected: Char): Boolean{
         return this.canRead() && this.peek() == expected
     }
 
+    @JvmStatic
     fun StringReader.test(expected: String): Boolean{
         return this.canRead(expected.length) && this.string.substring(this.cursor, this.cursor + expected.length) == expected
     }
 
+    @JvmStatic
     fun StringReader.expect(expected: String){
-        val qwq = this.string.substring(this.cursor, this.cursor + expected.length) != expected
-        if(qwq){
+        val qwq = this.string.substring(this.cursor, this.cursor + expected.length)
+        if(qwq != expected){
             throw CommandSyntaxException.BUILT_IN_EXCEPTIONS.readerExpectedSymbol()
                 .createWithContext(this, expected)
         }

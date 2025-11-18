@@ -111,33 +111,15 @@ abstract public class CommandExecutionContextMixin<T> {
                 .withColor(TextColor.parse("red").getOrThrow().getRgb());
         text.append("\n");
         text.append("Stack trace:").append("\n");
-        int stackCount = 0;
-        var stacks = ScopeManager.get().getDebugScopes();
+        text.append(getStack(10));
         MinecraftServer server = null;
-        for (var stack : stacks) {
-            var t = Text.literal(stack.getFunction());
-            var style = t.getStyle();
-            if(stacks.indexOf(stack) == 0){
-                style = style.withBold(true).withColor(TextColor.parse("aqua").getOrThrow());
-                if(stack.getExecutor() instanceof ServerCommandSource source){
-                    server = source.getServer();
-                }
-            }else {
-                style = style.withBold(false);
-            }
-            t.setStyle(style);
-            text = text.append(t);
-            text.append("\n");
-            stackCount++;
-            if(stackCount >= 10) {
-                text.append("... (" + (stacks.size() - stackCount) + " more)");
-                break;
-            }
+        var executor = ScopeManager.get().getDebugScopes().getFirst().getExecutor();
+        if(executor instanceof ServerCommandSource source){
+            server = source.getServer();
         }
         LOGGER.error(text.getLiteralString());
         if(server != null){
-            MutableText finalText = text;
-            server.getPlayerManager().getPlayerList().forEach(player -> player.sendMessage(finalText));
+            server.getPlayerManager().getPlayerList().forEach(player -> player.sendMessage(text));
         }
     }
 

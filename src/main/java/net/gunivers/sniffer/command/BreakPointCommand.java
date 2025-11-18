@@ -169,21 +169,7 @@ public class BreakPointCommand {
                     )
                     .then(literal("stack")
                             .executes(context -> {
-                                MutableText text = Text.empty();
-                                var stacks = ScopeManager.get().getDebugScopes();
-                                for (var stack : stacks) {
-                                    var t = Text.literal(stack.getFunction());
-                                    var style = t.getStyle();
-                                    if(stacks.indexOf(stack) == 0){
-                                        style = style.withBold(true).withColor(TextColor.parse("aqua").getOrThrow());
-                                    }else {
-                                        style = style.withBold(false);
-                                    }
-                                    t.setStyle(style);
-                                    text = text.append(t);
-                                    text.append("\n");
-                                }
-                                final MutableText finalText = text;
+                                final var finalText = getStack();
                                 context.getSource().sendFeedback(() -> finalText, false);
                                 return 1;
                             })
@@ -336,5 +322,47 @@ public class BreakPointCommand {
             source.sendError(Text.translatable("sniffer.commands.breakpoint.get.fail.error", e.toString()));
             return null;
         }
+    }
+
+    public static Text getStack(int maxStack){
+        int count = 0;
+        MutableText text = Text.empty();
+        var stacks = ScopeManager.get().getDebugScopes();
+        for (var stack : stacks) {
+            if(count >= maxStack){
+                text.append("... (" + (stacks.size() - count) + " more)");
+                break;
+            }
+            var t = Text.literal(stack.getFunction());
+            var style = t.getStyle();
+            if(stacks.indexOf(stack) == 0){
+                style = style.withBold(true).withColor(TextColor.parse("aqua").getOrThrow());
+            }else {
+                style = style.withBold(false);
+            }
+            t.setStyle(style);
+            text = text.append(t);
+            text.append("\n");
+            count++;
+        }
+        return text;
+    }
+
+    public static Text getStack(){
+        MutableText text = Text.empty();
+        var stacks = ScopeManager.get().getDebugScopes();
+        for (var stack : stacks) {
+            var t = Text.literal(stack.getFunction());
+            var style = t.getStyle();
+            if(stacks.indexOf(stack) == 0){
+                style = style.withBold(true).withColor(TextColor.parse("aqua").getOrThrow());
+            }else {
+                style = style.withBold(false);
+            }
+            t.setStyle(style);
+            text = text.append(t);
+            text.append("\n");
+        }
+        return text;
     }
 }
