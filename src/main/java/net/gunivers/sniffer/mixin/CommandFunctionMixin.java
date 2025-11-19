@@ -3,18 +3,15 @@ package net.gunivers.sniffer.mixin;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.logging.LogUtils;
 import net.gunivers.sniffer.DatapackDebugger;
 import net.gunivers.sniffer.command.FunctionTextLoader;
 import net.gunivers.sniffer.util.ReflectUtil;
-import net.gunivers.sniffer.util.StringHelper;
-import net.minecraft.command.SingleCommandAction;
+import net.gunivers.sniffer.util.Extension;
 import net.minecraft.command.SourcedCommandAction;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
 import net.minecraft.server.function.FunctionBuilder;
 import net.minecraft.util.Identifier;
-import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
@@ -124,7 +121,7 @@ public interface CommandFunctionMixin {
                         throw new IllegalArgumentException("Whilst parsing command on line " + j + ": " + commandSyntaxException.getMessage());
                     }
                 }
-            }else if(stringReader.canRead() && StringHelper.test(stringReader, "#!")){
+            }else if(stringReader.canRead() && Extension.test(stringReader, "#!")){
                 stringReader.skip();
                 stringReader.skip();
                 try {

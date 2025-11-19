@@ -8,10 +8,10 @@ import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType
 import com.mojang.brigadier.exceptions.Dynamic3CommandExceptionType
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import net.gunivers.sniffer.util.ReflectUtil
-import net.gunivers.sniffer.util.StringHelper.expect
-import net.gunivers.sniffer.util.StringHelper.readUntil
-import net.gunivers.sniffer.util.StringHelper.readWord
-import net.gunivers.sniffer.util.StringHelper.test
+import net.gunivers.sniffer.util.Extension.expect
+import net.gunivers.sniffer.util.Extension.readUntil
+import net.gunivers.sniffer.util.Extension.readWord
+import net.gunivers.sniffer.util.Extension.test
 import net.minecraft.command.BlockDataObject
 import net.minecraft.command.EntityDataObject
 import net.minecraft.command.EntitySelector
@@ -532,5 +532,23 @@ class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
                 target
             )
         }
+    }
+}
+
+class JvmtimerArgumentType: ArgumentType<String>{
+    override fun parse(reader: StringReader): String {
+        val id = reader.readUnquotedString()
+        return id
+    }
+
+    companion object {
+        @JvmStatic
+        fun getJvmtimer(context: CommandContext<*>, name: String?): String {
+            return context.getArgument(name, String::class.java)
+        }
+
+        @JvmStatic
+        fun jvmtimer() = JvmtimerArgumentType()
+
     }
 }

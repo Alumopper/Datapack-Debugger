@@ -2,8 +2,23 @@ package net.gunivers.sniffer.util
 
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.exceptions.CommandSyntaxException
+import net.minecraft.text.MutableText
+import net.minecraft.text.Text
 
-object StringHelper {
+object Extension {
+
+    @JvmStatic
+    fun MutableText.appendLine(str: String): MutableText =
+        this.append(str).append("\n")
+
+    @JvmStatic
+    fun MutableText.appendLine(text: Text): MutableText =
+        this.append(text).append("\n")
+
+    @JvmStatic
+    fun MutableText.appendLine(): MutableText =
+        this.append("\n")
+
     class StringReaderTester(val reader: StringReader, val cursor: Int = reader.cursor) {
 
         private var result = true

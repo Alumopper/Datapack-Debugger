@@ -10,10 +10,7 @@ import net.gunivers.sniffer.config.DebuggerConfig;
 import net.gunivers.sniffer.dap.DebuggerState;
 import net.gunivers.sniffer.dap.ScopeManager;
 import net.gunivers.sniffer.dap.WebSocketServer;
-import net.gunivers.sniffer.debugcmd.AssertCommand;
-import net.gunivers.sniffer.debugcmd.ExprArgumentType;
-import net.gunivers.sniffer.debugcmd.LogArgumentType;
-import net.gunivers.sniffer.debugcmd.LogCommand;
+import net.gunivers.sniffer.debugcmd.*;
 import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.util.Identifier;
@@ -121,6 +118,11 @@ public class DatapackDebugger implements ModInitializer {
 				ExprArgumentType.class,
 				ConstantArgumentSerializer.of(ExprArgumentType::expr)
 		);
+		ArgumentTypeRegistry.registerArgumentType(
+				Identifier.of("sniffer", "jvmtimer"),
+				JvmtimerArgumentType.class,
+				ConstantArgumentSerializer.of(JvmtimerArgumentType::jvmtimer)
+		);
 
 		// Initialize breakpoint command system
 		BreakPointCommand.onInitialize();
@@ -128,6 +130,7 @@ public class DatapackDebugger implements ModInitializer {
 		// Initialize Debug commands
 		LogCommand.onInitialize();
 		AssertCommand.onInitialize();
+		JvmtimerCommand.onInitialize();
 	}
 
 	/**

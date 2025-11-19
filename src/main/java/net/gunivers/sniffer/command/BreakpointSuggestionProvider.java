@@ -4,6 +4,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.server.command.ServerCommandSource;
 
 import java.util.List;
@@ -32,6 +33,7 @@ public class BreakpointSuggestionProvider implements SuggestionProvider<ServerCo
      * @param builder The suggestions builder
      * @return A future containing the generated suggestions
      */
+    @SuppressWarnings("unchecked")
     @Override
     public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> c, SuggestionsBuilder builder) {
         var context = BreakPointCommand.storedCommandExecutionContext.peekFirst();
@@ -39,10 +41,7 @@ public class BreakpointSuggestionProvider implements SuggestionProvider<ServerCo
             return builder.buildFuture();
         }
         try {
-            var cls = context.getClass();
-            var method = cls.getDeclaredMethod("getKeys");
-            method.setAccessible(true);
-            var keys = (List<String>) method.invoke(context);
+            var keys = (List<String>) ReflectUtil.invoke(context, "getKeys");
             for (var key : keys) {
                 builder.suggest(key);
             }
