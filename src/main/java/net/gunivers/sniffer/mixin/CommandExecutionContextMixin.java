@@ -111,7 +111,7 @@ abstract public class CommandExecutionContextMixin<T> {
                 .withColor(TextColor.parse("red").getOrThrow().getRgb());
         text.append("\n");
         text.append("Stack trace:").append("\n");
-        text.append(getStack(10));
+        text.append(getErrorStack(10));
         MinecraftServer server = null;
         var executor = ScopeManager.get().getDebugScopes().getFirst().getExecutor();
         if(executor instanceof ServerCommandSource source){

@@ -3,6 +3,7 @@ package net.gunivers.sniffer.command;
 import com.google.common.collect.Queues;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.logging.LogUtils;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.gunivers.sniffer.DatapackDebugger;
 import net.gunivers.sniffer.dap.DebuggerState;
@@ -15,6 +16,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
+import net.minecraft.util.Colors;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -60,7 +62,7 @@ public class BreakPointCommand {
     /** Queue storing command execution contexts for debugging */
     public static final Deque<CommandExecutionContext<?>> storedCommandExecutionContext = Queues.newArrayDeque();
     /** Logger instance for this class */
-    private static final org.slf4j.Logger LOGGER = DatapackDebugger.getLogger();
+    private static final org.slf4j.Logger LOGGER = LogUtils.getLogger();
 
     /**
      * Tracks the depth level at which a step operation was initiated.
@@ -324,25 +326,25 @@ public class BreakPointCommand {
         }
     }
 
-    public static Text getStack(int maxStack){
+    public static MutableText getStack(int maxStack){
         int count = 0;
         MutableText text = Text.empty();
         var stacks = ScopeManager.get().getDebugScopes();
         for (var stack : stacks) {
             if(count >= maxStack){
-                text.append("... (" + (stacks.size() - count) + " more)");
+                text.append(Text.literal("... (" + (stacks.size() - count) + " more)").withColor(Colors.WHITE));
                 break;
             }
             var t = Text.literal(stack.getFunction());
             var style = t.getStyle();
             if(stacks.indexOf(stack) == 0){
-                style = style.withBold(true).withColor(TextColor.parse("aqua").getOrThrow());
+                style = style.withBold(true).withColor(Colors.CYAN);
             }else {
-                style = style.withBold(false);
+                style = style.withBold(false).withColor(Colors.WHITE);
             }
             t.setStyle(style);
             text = text.append(t);
-            text.append("\n");
+            if(stacks.getLast() != stack) text.append("\n");
             count++;
         }
         return text;
@@ -355,9 +357,54 @@ public class BreakPointCommand {
             var t = Text.literal(stack.getFunction());
             var style = t.getStyle();
             if(stacks.indexOf(stack) == 0){
-                style = style.withBold(true).withColor(TextColor.parse("aqua").getOrThrow());
+                style = style.withBold(true).withColor(Colors.CYAN);
             }else {
-                style = style.withBold(false);
+                style = style.withBold(false).withColor(Colors.WHITE);
+            }
+            t.setStyle(style);
+            text = text.append(t);
+            text.append("\n");
+        }
+        return text;
+    }
+
+
+    public static MutableText getErrorStack(int maxStack){
+        int count = 0;
+        var color = TextColor.parse("#E4514C").getOrThrow().getRgb();
+        MutableText text = Text.empty();
+        var stacks = ScopeManager.get().getDebugScopes();
+        for (var stack : stacks) {
+            if(count >= maxStack){
+                text.append(Text.literal("... (" + (stacks.size() - count) + " more)").withColor(color));
+                break;
+            }
+            var t = Text.literal(stack.getFunction());
+            var style = t.getStyle();
+            if(stacks.indexOf(stack) == 0){
+                style = style.withBold(true).withColor(color);
+            }else {
+                style = style.withBold(false).withColor(color);
+            }
+            t.setStyle(style);
+            text = text.append(t);
+            if(stacks.getLast() != stack) text.append("\n");
+            count++;
+        }
+        return text;
+    }
+
+    public static Text getErrorStack(){
+        var color = TextColor.parse("#E4514C").getOrThrow().getRgb();
+        MutableText text = Text.empty();
+        var stacks = ScopeManager.get().getDebugScopes();
+        for (var stack : stacks) {
+            var t = Text.literal(stack.getFunction());
+            var style = t.getStyle();
+            if(stacks.indexOf(stack) == 0){
+                style = style.withBold(true).withColor(color);
+            }else {
+                style = style.withBold(false).withColor(color);
             }
             t.setStyle(style);
             text = text.append(t);

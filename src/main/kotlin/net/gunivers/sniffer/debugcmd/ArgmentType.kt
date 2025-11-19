@@ -62,6 +62,7 @@ class LogArgumentType: ArgumentType<LogArgumentType.Companion.Log> {
 class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
 
     override fun parse(reader: StringReader): Experiment {
+        val startIndex = reader.cursor
         reader.expect('{')
         reader.skipWhitespace()
         var first: DebugData? = null
@@ -113,7 +114,8 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
             throw MISSING_OP_ERROR.createWithContext(reader)
         }
         reader.expect('}')
-        return Experiment(first!!, ops.map { (op, arg) -> op to arg!! })
+        val endIndex = reader.cursor
+        return Experiment(first!!, ops.map { (op, arg) -> op to arg!! }, reader.string.substring(startIndex, endIndex))
     }
 
     fun parseArgument(reader: StringReader): DebugData {
@@ -141,7 +143,7 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
             return context.getArgument(name, Experiment::class.java)
         }
 
-        class Experiment(val first: DebugData?,val ops: List<Pair<String, DebugData>>): DebugData {
+        class Experiment(val first: DebugData?, val ops: List<Pair<String, DebugData>>, val content: String): DebugData {
             override fun get(ctx: CommandContext<ServerCommandSource>): Any {
                 var qwq = first?.get(ctx)
                 for ((op, arg) in ops){
