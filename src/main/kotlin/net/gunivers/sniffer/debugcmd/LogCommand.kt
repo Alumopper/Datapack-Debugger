@@ -22,7 +22,7 @@ object LogCommand {
                                 val data = l.get(it)
                                 text.append(DebugData.toText(data))
                             }
-                            it.source.sendFeedback({text}, false)
+                            it.source.server.playerManager.broadcast(text, false)
                             return@executes 1
                         }
                     )

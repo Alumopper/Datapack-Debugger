@@ -534,21 +534,3 @@ class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
         }
     }
 }
-
-class JvmtimerArgumentType: ArgumentType<String>{
-    override fun parse(reader: StringReader): String {
-        val id = reader.readUnquotedString()
-        return id
-    }
-
-    companion object {
-        @JvmStatic
-        fun getJvmtimer(context: CommandContext<*>, name: String?): String {
-            return context.getArgument(name, String::class.java)
-        }
-
-        @JvmStatic
-        fun jvmtimer() = JvmtimerArgumentType()
-
-    }
-}

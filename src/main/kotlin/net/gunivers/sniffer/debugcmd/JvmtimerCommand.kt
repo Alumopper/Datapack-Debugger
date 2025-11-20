@@ -1,13 +1,13 @@
 package net.gunivers.sniffer.debugcmd
 
-import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.logging.LogUtils
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.gunivers.sniffer.util.Extension.appendLine
-import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.server.command.CommandManager.argument
+import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.text.MutableText
 import net.minecraft.text.Text
 import net.minecraft.util.Colors
@@ -27,49 +27,49 @@ object JvmtimerCommand {
                 literal<ServerCommandSource?>("jvmtimer")
                     .requires { it.hasPermissionLevel(2) }
                     .then(literal<ServerCommandSource?>("start")
-                        .then(argument("id", JvmtimerArgumentType())
+                        .then(argument("id", StringArgumentType.string())
                             .suggests(JvmtimerSuggestionProvider)
                             .executes {
-                                val id = JvmtimerArgumentType.getJvmtimer(it, "id")
+                                val id = StringArgumentType.getString(it, "id")
                                 getTimer(id).start()
                                 it.source.sendFeedback({ Text.literal("Timer $id started") }, false)
                                 1
                             }
                         )
                     ).then(literal<ServerCommandSource?>("end")
-                        .then(argument("id", JvmtimerArgumentType())
+                        .then(argument("id", StringArgumentType.string())
                             .suggests(JvmtimerSuggestionProvider)
                             .executes {
-                                val id = JvmtimerArgumentType.getJvmtimer(it ,"id")
+                                val id = StringArgumentType.getString(it ,"id")
                                 getTimer(id).end()
                                 it.source.sendFeedback({ Text.literal("Timer $id ended") }, false)
                                 1
                             }
                         )
                     ).then(literal<ServerCommandSource?>("get")
-                        .then(argument("id", JvmtimerArgumentType())
+                        .then(argument("id", StringArgumentType.string())
                             .suggests(JvmtimerSuggestionProvider)
                             .executes {
-                                val id = JvmtimerArgumentType.getJvmtimer(it ,"id")
+                                val id = StringArgumentType.getString(it ,"id")
                                 getTimer(id).get(it)
                                 1
                             }
                         )
                     ).then(literal<ServerCommandSource?>("reset")
-                        .then(argument("id", JvmtimerArgumentType())
+                        .then(argument("id", StringArgumentType.string())
                             .suggests(JvmtimerSuggestionProvider)
                             .executes {
-                                val id = JvmtimerArgumentType.getJvmtimer(it ,"id")
+                                val id = StringArgumentType.getString(it ,"id")
                                 getTimer(id).reset()
                                 it.source.sendFeedback({ Text.literal("Timer $id reset") }, false)
                                 1
                             }
                         )
                     ).then(literal<ServerCommandSource?>("disable")
-                        .then(argument("id", JvmtimerArgumentType())
+                        .then(argument("id", StringArgumentType.string())
                             .suggests(JvmtimerSuggestionProvider)
                             .executes {
-                                val id = JvmtimerArgumentType.getJvmtimer(it ,"id")
+                                val id = StringArgumentType.getString(it ,"id")
                                 getTimer(id).disable()
                                 it.source.sendFeedback({ Text.literal("Timer $id disabled") }, false)
                                 1

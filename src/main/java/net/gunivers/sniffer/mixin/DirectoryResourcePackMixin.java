@@ -66,7 +66,7 @@ public class DirectoryResourcePackMixin {
                 }
 
             });
-        } catch (NotDirectoryException | NoSuchFileException var10) {
+        } catch (NotDirectoryException | NoSuchFileException ignored) {
         } catch (IOException iOException) {
             LOGGER.error("Failed to list path {}", path2, iOException);
         }

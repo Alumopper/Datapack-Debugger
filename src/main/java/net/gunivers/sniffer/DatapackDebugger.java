@@ -4,6 +4,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.gunivers.sniffer.command.BreakPointCommand;
 import net.gunivers.sniffer.command.FunctionPathGetter;
 import net.gunivers.sniffer.config.DebuggerConfig;
@@ -11,7 +12,9 @@ import net.gunivers.sniffer.dap.DebuggerState;
 import net.gunivers.sniffer.dap.ScopeManager;
 import net.gunivers.sniffer.dap.WebSocketServer;
 import net.gunivers.sniffer.debugcmd.*;
+import net.gunivers.sniffer.watcher.WatcherManager;
 import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;
+import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.util.Identifier;
 import org.glassfish.tyrus.server.Server;
@@ -118,11 +121,6 @@ public class DatapackDebugger implements ModInitializer {
 				ExprArgumentType.class,
 				ConstantArgumentSerializer.of(ExprArgumentType::expr)
 		);
-		ArgumentTypeRegistry.registerArgumentType(
-				Identifier.of("sniffer", "jvmtimer"),
-				JvmtimerArgumentType.class,
-				ConstantArgumentSerializer.of(JvmtimerArgumentType::jvmtimer)
-		);
 
 		// Initialize breakpoint command system
 		BreakPointCommand.onInitialize();
@@ -131,6 +129,12 @@ public class DatapackDebugger implements ModInitializer {
 		LogCommand.onInitialize();
 		AssertCommand.onInitialize();
 		JvmtimerCommand.onInitialize();
+		WatchCommand.onInitialize();
+
+		//Directory watcher
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+			WatcherManager.stopAll();
+		});
 	}
 
 	/**

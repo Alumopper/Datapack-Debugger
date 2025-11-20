@@ -5,8 +5,8 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.gunivers.sniffer.DatapackDebugger;
 import net.gunivers.sniffer.command.FunctionTextLoader;
-import net.gunivers.sniffer.util.ReflectUtil;
 import net.gunivers.sniffer.util.Extension;
+import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.command.SourcedCommandAction;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.function.CommandFunction;
@@ -15,11 +15,7 @@ import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.List;
 
 import static net.minecraft.server.function.CommandFunction.parse;
@@ -36,36 +32,15 @@ public interface CommandFunctionMixin {
         return false;
     }
 
-    @ModifyVariable(method = "create", at = @At("HEAD"), ordinal = 0, argsOnly = true)
-    private static List<String> create(List<String> value) {
-        ArrayList<String> list = new ArrayList<>();
-        // Iteration over the lines of the function
-        for (String str : value){
-            // If the current line is a breakpoint comment, we replace it by the breakpoint command
-            if(str.equals("#breakpoint")){
-                list.add("breakpoint");
-                // We add the line without modification otherwise
-            }else {
-                list.add(str);
-            }
-        }
-        return list;
-    }
-
-/**
- * @author theogiraudet
- * @reason to save in each command the file and source line
- */
-@Overwrite
+    /**
+     * @author theogiraudet
+     * @reason to save in each command the file and source line
+     */
+    @Overwrite
     static <T extends AbstractServerCommandSource<T>> CommandFunction<T> create(Identifier id, CommandDispatcher<T> dispatcher, T source, List<String> lines) {
         FunctionTextLoader.put(id, lines);
-        FunctionBuilder<T> functionBuilder;
-        try {
-            functionBuilder = FunctionBuilder.class.getDeclaredConstructor().newInstance();
-        } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
-
+        //noinspection unchecked
+        FunctionBuilder<T> functionBuilder = ReflectUtil.newInstance(FunctionBuilder.class).getData();
         for (int i = 0; i < lines.size(); ++i) {
             int j = i + 1;
             String string = lines.get(i).trim();
