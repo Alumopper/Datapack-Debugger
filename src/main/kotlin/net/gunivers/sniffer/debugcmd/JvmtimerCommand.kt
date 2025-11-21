@@ -32,7 +32,7 @@ object JvmtimerCommand {
                             .executes {
                                 val id = StringArgumentType.getString(it, "id")
                                 getTimer(id).start()
-                                it.source.sendFeedback({ Text.literal("Timer $id started") }, false)
+                                it.source.sendFeedback({ Text.translatable("sniffer.commands.jvmtimer.started", id) }, false)
                                 1
                             }
                         )
@@ -42,7 +42,7 @@ object JvmtimerCommand {
                             .executes {
                                 val id = StringArgumentType.getString(it ,"id")
                                 getTimer(id).end()
-                                it.source.sendFeedback({ Text.literal("Timer $id ended") }, false)
+                                it.source.sendFeedback({ Text.translatable("sniffer.commands.jvmtimer.stopped", id) }, false)
                                 1
                             }
                         )
@@ -61,7 +61,7 @@ object JvmtimerCommand {
                             .executes {
                                 val id = StringArgumentType.getString(it ,"id")
                                 getTimer(id).reset()
-                                it.source.sendFeedback({ Text.literal("Timer $id reset") }, false)
+                                it.source.sendFeedback({ Text.translatable("sniffer.commands.jvmtimer.reset", id) }, false)
                                 1
                             }
                         )
@@ -71,7 +71,7 @@ object JvmtimerCommand {
                             .executes {
                                 val id = StringArgumentType.getString(it ,"id")
                                 getTimer(id).disable()
-                                it.source.sendFeedback({ Text.literal("Timer $id disabled") }, false)
+                                it.source.sendFeedback({ Text.translatable("sniffer.commands.jvmtimer.disable", id) }, false)
                                 1
                             }
                         )
@@ -125,19 +125,19 @@ object JvmtimerCommand {
 
         fun get(ctx: CommandContext<ServerCommandSource>){
             if(count == 0){
-                ctx.source.sendFeedback({ Text.literal("Timer $id is not started") }, false)
+                ctx.source.sendFeedback({ Text.translatable("sniffer.commands.jvmtimer.not_started", id) }, false)
                 return
             }
             if(!enabled){
-                ctx.source.sendFeedback({ Text.literal("Timer $id is disabled") }, false)
+                ctx.source.sendFeedback({ Text.translatable("sniffer.commands.jvmtimer.disable", id) }, false)
                 return
             }
             val text = Text.empty()
-            text.title("Timer $id: ")
-                .desc("Total time: ").value("${totalTime / 1_000_000.0}ms")
-                .desc("Count: ").value(count.toString())
-                .desc("Average time: ").value("${totalTime / count / 1_000_000.0}ms")
-                .desc("Max/Min time: ").value("${maxTime / 1_000.0}μs/${minTime / 1_000.0}μs")
+            text.title("sniffer.commands.jvmtimer.info.id").value(id)
+                .desc("sniffer.commands.jvmtimer.info.total").value("${totalTime / 1_000_000.0}ms")
+                .desc("sniffer.commands.jvmtimer.info.count").value(count.toString())
+                .desc("sniffer.commands.jvmtimer.info.average").value("${totalTime / count / 1_000_000.0}ms")
+                .desc("sniffer.commands.jvmtimer.info.max_min").value("${maxTime / 1_000.0}μs/${minTime / 1_000.0}μs")
             ctx.source.sendFeedback({ text }, false)
         }
         fun reset(){
@@ -155,10 +155,10 @@ object JvmtimerCommand {
         }
 
         private fun MutableText.title(str: String): MutableText =
-            this.appendLine(Text.literal(str).styled { it.withColor(Colors.CYAN).withBold(true) })
+            this.appendLine(Text.translatable(str).styled { it.withColor(Colors.CYAN).withBold(true) })
 
         private fun MutableText.desc(str: String): MutableText =
-            this.appendLine(Text.literal(str).styled { it.withColor(Colors.WHITE).withBold(false) })
+            this.appendLine(Text.translatable(str).styled { it.withColor(Colors.WHITE).withBold(false) })
 
         private fun MutableText.value(str: String): MutableText =
             this.appendLine(Text.literal(str).styled { it.withColor(Colors.CYAN).withBold(false) })

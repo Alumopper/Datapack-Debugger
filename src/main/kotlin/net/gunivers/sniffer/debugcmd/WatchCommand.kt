@@ -82,15 +82,21 @@ object WatchCommand {
                                 //set if watcher will auto reload function when changed
                                 val bool = BoolArgumentType.getBool(it, "bool")
                                 isAutoReload = bool
+                                if(isAutoReload){
+                                    it.source.sendFeedback({ Text.translatable("sniffer.commands.watcher.auto.enable")}, false)
+                                }else{
+                                    it.source.sendFeedback({ Text.translatable("sniffer.commands.watcher.auto.disable")}, false)
+                                }
                                 return@executes 1
                             }
                         ).executes {
                             //return if auto reload is enabled
-                            it.source.sendFeedback({ Text.literal("Auto reload: $isAutoReload") }, false)
+                            it.source.sendFeedback({ Text.translatable("sniffer.commands.watcher.auto", isAutoReload) }, false)
                             return@executes 1
                         }
                     ).then(literal<ServerCommandSource?>("reload")
                         .executes {
+                            it.source.sendFeedback({Text.translatable("sniffer.commands.watcher.hot_reload")}, false)
                             hotReload(it.source.server)
                             return@executes 1
                         }
@@ -105,7 +111,7 @@ object WatchCommand {
             val datapackPath = server.getSavePath(WorldSavePath.DATAPACKS)
             val packPath = datapackPath.resolve(id)
             if(Files.notExists(packPath)){
-                src.sendError(Text.literal("Datapack $id not found"))
+                src.sendError(Text.translatable("sniffer.commands.watcher.failed.datapack_not_found", id))
                 return 0
             }
             val functionsRoot = packPath.resolve("data")
@@ -120,14 +126,14 @@ object WatchCommand {
                 }
             }
             if(ok){
-                src.sendFeedback({ Text.literal("Started watching: $id") }, false)
+                src.sendFeedback({ Text.translatable("sniffer.commands.watcher.start", id) }, false)
                 return 1
             }else{
-                src.sendError(Text.literal("Failed to start watching: $id"))
+                src.sendError(Text.translatable("sniffer.commands.watcher.start.failed", id))
                 return 0
             }
         }catch (ex: Exception){
-            src.sendError(Text.literal("Failed to start watching: $id"))
+            src.sendError(Text.translatable("sniffer.commands.watcher.start.failed", id))
             LOGGER.error("Failed to start watching: $id", ex)
             return 0
         }
@@ -137,14 +143,14 @@ object WatchCommand {
         try{
             val ok = WatcherManager.stop(id)
             if(ok){
-                src.sendFeedback({ Text.literal("Stopped watching: $id") }, false)
+                src.sendFeedback({ Text.translatable("sniffer.commands.watcher.stop", id) }, false)
                 return 1
             }else{
-                src.sendError(Text.literal("Failed to stop watching: $id"))
+                src.sendError(Text.translatable("sniffer.commands.watcher.stop.failed", id))
                 return 0
             }
         }catch (ex: Exception){
-            src.sendError(Text.literal("Failed to stop watching: $id"))
+            src.sendError(Text.translatable("sniffer.commands.watcher.stop.failed", id))
             LOGGER.error("Failed to stop watching: $id", ex)
             return 0
         }
@@ -226,7 +232,7 @@ object WatchCommand {
                 try{
                     return@map CommandFunction.create(identifier, dispatcher, serverCommandSource, lines)
                 }catch (ex: Exception){
-                    val text = Text.literal("Failed to modify: $identifier").withColor(Colors.RED)
+                    val text = Text.translatable("sniffer.commands.watcher.modify.failed", identifier).withColor(Colors.RED)
                     server.playerManager.broadcast(text, false)
                     LOGGER.error("Failed to modify function: $identifier", ex)
                     return@map null
@@ -234,7 +240,7 @@ object WatchCommand {
             }.filterNotNull()
         }.handle {modified, ex ->
             if(ex != null){
-                val text = Text.literal("Exception while modifying functions: ${ex.message}").withColor(Colors.RED)
+                val text = Text.translatable("sniffer.commands.watcher.modify.failed.ex", ex.message).withColor(Colors.RED)
                 server.playerManager.broadcast(text, false)
                 LOGGER.error("Failed to modify functions", ex)
             }
@@ -264,7 +270,7 @@ object WatchCommand {
                 try{
                     return@map CommandFunction.create(identifier, dispatcher, serverCommandSource, lines)
                 }catch (ex: Exception){
-                    val text = Text.literal("Failed to create: $identifier").withColor(Colors.RED)
+                    val text = Text.translatable("sniffer.commands.watcher.create.failed", identifier).withColor(Colors.RED)
                     server.playerManager.broadcast(text, false)
                     LOGGER.error("Failed to create function: $identifier", ex)
                     return@map null
@@ -272,7 +278,7 @@ object WatchCommand {
             }.filterNotNull()
         }.handle {created, ex ->
             if(ex != null){
-                val text = Text.literal("Exception while creating functions: ${ex.message}").withColor(Colors.RED)
+                val text = Text.translatable("sniffer.commands.watcher.create.failed.ex", ex.message).withColor(Colors.RED)
                 server.playerManager.broadcast(text, false)
                 LOGGER.error("Failed to create functions", ex)
             }
@@ -295,7 +301,7 @@ object WatchCommand {
             }
         }.handle {deleted, ex ->
             if(ex != null){
-                val text = Text.literal("Exception while deleting functions: ${ex.message}").withColor(Colors.RED)
+                val text = Text.translatable("sniffer.commands.watcher.delete.failed.ex", ex.message).withColor(Colors.RED)
                 server.playerManager.broadcast(text, false)
                 LOGGER.error("Failed to delete functions", ex)
             }
