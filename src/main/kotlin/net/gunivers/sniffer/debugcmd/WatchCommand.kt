@@ -1,5 +1,6 @@
 package net.gunivers.sniffer.debugcmd
 
+import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.BoolArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
@@ -8,17 +9,26 @@ import io.methvin.watcher.DirectoryChangeEvent
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.gunivers.sniffer.util.ReflectUtil
 import net.gunivers.sniffer.watcher.WatcherManager
+import net.minecraft.registry.RegistryKeys
+import net.minecraft.resource.ResourceFinder
+import net.minecraft.screen.ScreenTexts
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.command.CommandManager.argument
+import net.minecraft.server.command.CommandOutput
 import net.minecraft.server.command.ServerCommandSource
+import net.minecraft.server.function.CommandFunction
 import net.minecraft.server.function.FunctionLoader
 import net.minecraft.text.Text
 import net.minecraft.text.TextColor
+import net.minecraft.util.Colors
 import net.minecraft.util.Identifier
 import net.minecraft.util.WorldSavePath
+import net.minecraft.util.math.Vec2f
+import net.minecraft.util.math.Vec3d
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
 object WatchCommand {
@@ -38,6 +48,8 @@ object WatchCommand {
 
 
     private var isAutoReload = false
+
+    private val FINDER = ResourceFinder(RegistryKeys.getPath(FunctionLoader.FUNCTION_REGISTRY_KEY), ".mcfunction")
 
     @JvmStatic
     fun onInitialize(){
@@ -194,33 +206,108 @@ object WatchCommand {
     private fun hotReload(server: MinecraftServer){
         snapshotAndClear()
         val loader = ReflectUtil.getT(server.commandFunctionManager, "loader", FunctionLoader::class.java).data
-        for ((path, datapackPath) in createdFunction){
-            createFunction(server, loader, path, datapackPath)
-        }
-        for ((path, datapackPath) in modifiedFunction){
-            modifyFunction(server, loader, path, datapackPath)
-        }
-        for ((path, datapackPath) in deletedFunction){
-            deleteFunction(server, loader, path, datapackPath)
+        createFunction(server, loader, createdFunction)
+        modifyFunction(server, loader, modifiedFunction)
+        deleteFunction(server, loader, deletedFunction)
+    }
+
+    private fun modifyFunction(server: MinecraftServer, loader: FunctionLoader, path: List<Pair<Path, Path>>){
+        val level = ReflectUtil.getT(loader, "level", Int::class.java).data
+        @Suppress("UNCHECKED_CAST") val dispatcher = ReflectUtil.get(loader, "commandDispatcher").data as CommandDispatcher<ServerCommandSource>
+        @Suppress("UNCHECKED_CAST") val functions = ReflectUtil.get(loader, "functions").data as Map<Identifier, CommandFunction<ServerCommandSource>>
+        val serverCommandSource = ServerCommandSource(
+            CommandOutput.DUMMY, Vec3d.ZERO, Vec2f.ZERO, null, level, "", ScreenTexts.EMPTY, null, null
+        )
+        CompletableFuture.supplyAsync {
+            path.map { (functionPath, datapackPath) ->
+                val identifier = getIdentifier(functionPath, datapackPath)
+                //read function contents
+                val lines = Files.readAllLines(functionPath)
+                try{
+                    return@map CommandFunction.create(identifier, dispatcher, serverCommandSource, lines)
+                }catch (ex: Exception){
+                    val text = Text.literal("Failed to modify: $identifier").withColor(Colors.RED)
+                    server.playerManager.broadcast(text, false)
+                    LOGGER.error("Failed to modify function: $identifier", ex)
+                    return@map null
+                }
+            }.filterNotNull()
+        }.handle {modified, ex ->
+            if(ex != null){
+                val text = Text.literal("Exception while modifying functions: ${ex.message}").withColor(Colors.RED)
+                server.playerManager.broadcast(text, false)
+                LOGGER.error("Failed to modify functions", ex)
+            }
+            val qwq = HashMap<Identifier, CommandFunction<ServerCommandSource>>()
+            qwq.putAll(functions)
+            modified.forEach {
+                qwq[it.id()] = it
+                val text = Text.literal("• ${it.id()}").withColor(TextColor.parse("#D1A21E").getOrThrow().rgb)
+                server.playerManager.broadcast(text, false)
+            }
+            ReflectUtil.set(loader, "functions", qwq)
         }
     }
 
-    private fun modifyFunction(server: MinecraftServer, loader: FunctionLoader, path: Path, datapackPath: Path){
-        val id = getIdentifier(path, datapackPath)
-        val text = Text.literal("• $id").withColor(TextColor.parse("#D1A21E").getOrThrow().rgb)
-        server.playerManager.broadcast(text, false)
+    private fun createFunction(server: MinecraftServer, loader: FunctionLoader, path: List<Pair<Path, Path>>){
+        val level = ReflectUtil.getT(loader, "level", Int::class.java).data
+        @Suppress("UNCHECKED_CAST") val dispatcher = ReflectUtil.get(loader, "commandDispatcher").data as CommandDispatcher<ServerCommandSource>
+        @Suppress("UNCHECKED_CAST") val functions = ReflectUtil.get(loader, "functions").data as Map<Identifier, CommandFunction<ServerCommandSource>>
+        val serverCommandSource = ServerCommandSource(
+            CommandOutput.DUMMY, Vec3d.ZERO, Vec2f.ZERO, null, level, "", ScreenTexts.EMPTY, null, null
+        )
+        CompletableFuture.supplyAsync {
+            path.map { (functionPath, datapackPath) ->
+                val identifier = getIdentifier(functionPath, datapackPath)
+                //read function contents
+                val lines = Files.readAllLines(functionPath)
+                try{
+                    return@map CommandFunction.create(identifier, dispatcher, serverCommandSource, lines)
+                }catch (ex: Exception){
+                    val text = Text.literal("Failed to create: $identifier").withColor(Colors.RED)
+                    server.playerManager.broadcast(text, false)
+                    LOGGER.error("Failed to create function: $identifier", ex)
+                    return@map null
+                }
+            }.filterNotNull()
+        }.handle {created, ex ->
+            if(ex != null){
+                val text = Text.literal("Exception while creating functions: ${ex.message}").withColor(Colors.RED)
+                server.playerManager.broadcast(text, false)
+                LOGGER.error("Failed to create functions", ex)
+            }
+            val qwq = HashMap<Identifier, CommandFunction<ServerCommandSource>>()
+            qwq.putAll(functions)
+            created.forEach {
+                qwq[it.id()] = it
+                val text = Text.literal("+ ${it.id()}").withColor(TextColor.parse("#12B617").getOrThrow().rgb)
+                server.playerManager.broadcast(text, false)
+            }
+            ReflectUtil.set(loader, "functions", qwq)
+        }
     }
 
-    private fun createFunction(server: MinecraftServer, loader: FunctionLoader, path: Path, datapackPath: Path){
-        val id = getIdentifier(path, datapackPath)
-        val text = Text.literal("+ $id").withColor(TextColor.parse("#12B617").getOrThrow().rgb)
-        server.playerManager.broadcast(text, false)
-    }
-
-    private fun deleteFunction(server: MinecraftServer, loader:FunctionLoader, path: Path, datapackPath: Path){
-        val id = getIdentifier(path, datapackPath)
-        val text = Text.literal("- $id").withColor(TextColor.parse("#B62712").getOrThrow().rgb)
-        server.playerManager.broadcast(text, false)
+    private fun deleteFunction(server: MinecraftServer, loader:FunctionLoader, path: List<Pair<Path, Path>>){
+        @Suppress("UNCHECKED_CAST") val functions = ReflectUtil.get(loader, "functions").data as Map<Identifier, CommandFunction<ServerCommandSource>>
+        CompletableFuture.supplyAsync {
+            path.map { (functionPath, datapackPath) ->
+                getIdentifier(functionPath, datapackPath)
+            }
+        }.handle {deleted, ex ->
+            if(ex != null){
+                val text = Text.literal("Exception while deleting functions: ${ex.message}").withColor(Colors.RED)
+                server.playerManager.broadcast(text, false)
+                LOGGER.error("Failed to delete functions", ex)
+            }
+            val qwq = HashMap<Identifier, CommandFunction<ServerCommandSource>>()
+            qwq.putAll(functions)
+            deleted.forEach {
+                qwq.remove(it)
+                val text = Text.literal("- $it").withColor(TextColor.parse("#B61212").getOrThrow().rgb)
+                server.playerManager.broadcast(text, false)
+            }
+            ReflectUtil.set(loader, "functions", qwq)
+        }
     }
 
     private fun getIdentifier(functionPath: Path, datapackPath: Path): Identifier {

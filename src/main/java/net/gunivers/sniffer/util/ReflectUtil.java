@@ -86,7 +86,7 @@ public final class ReflectUtil {
         return VAR_HANDLE_CACHE.computeIfAbsent(k, kk -> {
             try {
                 // 先通过反射获取字段类型
-                Field field = target.getDeclaredField("fieldName");
+                Field field = target.getDeclaredField(fieldName);
                 Class<?> fieldType = field.getType();
                 MethodHandles.Lookup lookup =
                         MethodHandles.privateLookupIn(target, PUBLIC_LOOKUP);
