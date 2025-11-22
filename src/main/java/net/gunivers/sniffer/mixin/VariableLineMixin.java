@@ -68,7 +68,7 @@ public class VariableLineMixin<T extends AbstractServerCommandSource<T>> {
     SourcedCommandAction<T> instantiate(List<String> args, CommandDispatcher<T> dispatcher, Identifier id, Operation<SourcedCommandAction<T>> original) throws MacroException {
         var result = original.call(args, dispatcher, id);
         ReflectUtil.invoke(result, "setSourceFunction", id.toString());
-        int line = ReflectUtil.getT(this, "line", int.class).getData();
+        int line = getLine();
         ReflectUtil.invoke(result, "setSourceLine", line);
         return result;
     }

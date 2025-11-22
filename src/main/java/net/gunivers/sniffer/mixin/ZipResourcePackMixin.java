@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 
 import java.nio.file.Path;
 import java.util.Enumeration;
@@ -35,6 +36,9 @@ public class ZipResourcePackMixin {
     @Shadow
     private String appendOverlayPrefix(String path) { return ""; }
 
+    @Shadow
+    private ZipResourcePack.ZipFileWrapper zipFile = null;
+
     /**
      * Overwrites the findResources method to track function file paths.
      * This method enhances the original by capturing the physical file paths
@@ -48,10 +52,9 @@ public class ZipResourcePackMixin {
      */
     @Overwrite
     public void findResources(ResourceType type, String namespace, String prefix, ResourcePack.ResultConsumer consumer) {
-        var zipFileOpt = ReflectUtil.getT(this, "zipFile").flatMap(obj -> ReflectUtil.invoke(obj, "open")).onFailure(LOGGER::error).toOptional();
-        if (zipFileOpt.isPresent()) {
-            var zipFile = (ZipFile) zipFileOpt.get();
-            Enumeration<? extends ZipEntry> enumeration = zipFile.entries();
+        var zipFileOpt = zipFile.open();
+        if (zipFileOpt != null) {
+            Enumeration<? extends ZipEntry> enumeration = zipFileOpt.entries();
             String var10001 = type.getDirectory();
             String string = this.appendOverlayPrefix(var10001 + "/" + namespace + "/");
             String string2 = string + prefix + "/";
@@ -65,9 +68,9 @@ public class ZipResourcePackMixin {
                         Identifier identifier = Identifier.tryParse(namespace, string4);
                         if (identifier != null) {
                             if(identifier.getPath().endsWith(".mcfunction")) {
-                                ScopeManager.get().savePath(Path.of(zipFile.getName(), string3), identifier, RealPath.Kind.ZIP);
+                                ScopeManager.get().savePath(Path.of(zipFileOpt.getName(), string3), identifier, RealPath.Kind.ZIP);
                             }
-                            consumer.accept(identifier, InputSupplier.create(zipFile, zipEntry));
+                            consumer.accept(identifier, InputSupplier.create(zipFileOpt, zipEntry));
                         } else {
                             LOGGER.warn("Invalid path in datapack: {}:{}, ignoring", namespace, string4);
                         }

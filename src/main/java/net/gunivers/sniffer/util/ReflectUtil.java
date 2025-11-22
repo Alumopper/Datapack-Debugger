@@ -1,6 +1,8 @@
 package net.gunivers.sniffer.util;
 
 import com.mojang.logging.LogUtils;
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.MappingResolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -37,6 +39,11 @@ public final class ReflectUtil {
     private static final Map<String, MethodHandle> MH_HANDLE_CACHE = new ConcurrentHashMap<>();
     private static final Map<String, MethodHandle> CONSTRUCTOR_HANDLE_CACHE = new ConcurrentHashMap<>();
     private static final Map<String, Object> LAMBDA_CACHE = new ConcurrentHashMap<>();
+    private static final MappingResolver MR = FabricLoader.getInstance().getMappingResolver();
+
+    private static String mapField(String named, Class<?> owner, Class<?> target) {
+        return MR.mapFieldName("named", owner.getName(), named, target.getName());
+    }
 
     private static String key(Class<?> c, String name, Class<?>... types) {
         StringBuilder sb = new StringBuilder(c.getName()).append('#').append(name);

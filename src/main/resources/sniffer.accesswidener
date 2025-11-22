@@ -3,3 +3,5 @@ accessible      class   net/minecraft/server/function/FunctionBuilder
 accessible      class   net/minecraft/server/function/Macro$Line
 accessible      class   net/minecraft/command/argument/NbtPathArgumentType$PathNode
 accessible      method  net/minecraft/command/argument/NbtPathArgumentType parseNode (Lcom/mojang/brigadier/StringReader;Z)Lnet/minecraft/command/argument/NbtPathArgumentType$PathNode;
+accessible      class   net/minecraft/resource/ZipResourcePack$ZipFileWrapper
+accessible      method  net/minecraft/resource/ZipResourcePack$ZipFileWrapper open ()Ljava/util/zip/ZipFile;

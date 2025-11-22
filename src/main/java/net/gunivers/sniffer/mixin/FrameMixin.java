@@ -5,7 +5,9 @@ import net.gunivers.sniffer.dap.ScopeManager;
 import net.gunivers.sniffer.util.ReflectUtil;
 import net.minecraft.command.Frame;
 import net.minecraft.server.function.Procedure;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -29,16 +31,13 @@ public class FrameMixin {
     @Unique
     private Procedure<?> function;
 
-    @Unique
-    private int getDepth(){
-        return (int)ReflectUtil.invoke(this, "depth").getData();
-    }
+    @Shadow @Final private int depth;
 
     @Inject(method = "doReturn", at = @At("HEAD"))
     private void beforeReturn(CallbackInfo ci) {
         // when a function is returned by a return command, the FunctionOutAction will not execute, so we need to execute it here manually
         ScopeManager.get().unscope();
         // BreakPointCommand.stepDepth - 1 because we only want to decrement if we go higher than the stepDepth
-        if(BreakPointCommand.moveSteps > 0 && isStepOut() && getDepth() - 1 <= BreakPointCommand.stepDepth - 1) BreakPointCommand.moveSteps --;
+        if(BreakPointCommand.moveSteps > 0 && isStepOut() && depth - 1 <= BreakPointCommand.stepDepth - 1) BreakPointCommand.moveSteps --;
     }
 }

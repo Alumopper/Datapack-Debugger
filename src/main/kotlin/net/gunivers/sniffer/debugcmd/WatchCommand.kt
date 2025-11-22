@@ -1,16 +1,15 @@
 package net.gunivers.sniffer.debugcmd
 
-import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.BoolArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.logging.LogUtils
 import io.methvin.watcher.DirectoryChangeEvent
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
+import net.gunivers.sniffer.mixin.CommandFunctionManagerAccessors
+import net.gunivers.sniffer.mixin.FunctionLoaderAccessors
 import net.gunivers.sniffer.util.ReflectUtil
 import net.gunivers.sniffer.watcher.WatcherManager
-import net.minecraft.registry.RegistryKeys
-import net.minecraft.resource.ResourceFinder
 import net.minecraft.screen.ScreenTexts
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.command.CommandManager.argument
@@ -46,14 +45,11 @@ object WatchCommand {
 
     private val map = ConcurrentHashMap<Path, Entry>()
 
-
     private var isAutoReload = false
-
-    private val FINDER = ResourceFinder(RegistryKeys.getPath(FunctionLoader.FUNCTION_REGISTRY_KEY), ".mcfunction")
 
     @JvmStatic
     fun onInitialize(){
-        CommandRegistrationCallback.EVENT.register { dispatcher, registryAccess, environment ->
+        CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             dispatcher.register(
                 literal<ServerCommandSource?>("watch")
                     .requires{it.hasPermissionLevel(2)}
@@ -211,16 +207,17 @@ object WatchCommand {
 
     private fun hotReload(server: MinecraftServer){
         snapshotAndClear()
-        val loader = ReflectUtil.getT(server.commandFunctionManager, "loader", FunctionLoader::class.java).data
+        val loader = (server.commandFunctionManager as CommandFunctionManagerAccessors).loader
         createFunction(server, loader, createdFunction)
         modifyFunction(server, loader, modifiedFunction)
         deleteFunction(server, loader, deletedFunction)
     }
 
     private fun modifyFunction(server: MinecraftServer, loader: FunctionLoader, path: List<Pair<Path, Path>>){
-        val level = ReflectUtil.getT(loader, "level", Int::class.java).data
-        @Suppress("UNCHECKED_CAST") val dispatcher = ReflectUtil.get(loader, "commandDispatcher").data as CommandDispatcher<ServerCommandSource>
-        @Suppress("UNCHECKED_CAST") val functions = ReflectUtil.get(loader, "functions").data as Map<Identifier, CommandFunction<ServerCommandSource>>
+        val la = loader as FunctionLoaderAccessors
+        val dispatcher = la.commandDispatcher
+        val functions = la.functions
+        val level = la.level
         val serverCommandSource = ServerCommandSource(
             CommandOutput.DUMMY, Vec3d.ZERO, Vec2f.ZERO, null, level, "", ScreenTexts.EMPTY, null, null
         )
@@ -251,14 +248,15 @@ object WatchCommand {
                 val text = Text.literal("• ${it.id()}").withColor(TextColor.parse("#D1A21E").getOrThrow().rgb)
                 server.playerManager.broadcast(text, false)
             }
-            ReflectUtil.set(loader, "functions", qwq)
+            la.functions = qwq
         }
     }
 
     private fun createFunction(server: MinecraftServer, loader: FunctionLoader, path: List<Pair<Path, Path>>){
-        val level = ReflectUtil.getT(loader, "level", Int::class.java).data
-        @Suppress("UNCHECKED_CAST") val dispatcher = ReflectUtil.get(loader, "commandDispatcher").data as CommandDispatcher<ServerCommandSource>
-        @Suppress("UNCHECKED_CAST") val functions = ReflectUtil.get(loader, "functions").data as Map<Identifier, CommandFunction<ServerCommandSource>>
+        val la = loader as FunctionLoaderAccessors
+        val dispatcher = la.commandDispatcher
+        val functions = la.functions
+        val level = la.level
         val serverCommandSource = ServerCommandSource(
             CommandOutput.DUMMY, Vec3d.ZERO, Vec2f.ZERO, null, level, "", ScreenTexts.EMPTY, null, null
         )
@@ -289,12 +287,13 @@ object WatchCommand {
                 val text = Text.literal("+ ${it.id()}").withColor(TextColor.parse("#12B617").getOrThrow().rgb)
                 server.playerManager.broadcast(text, false)
             }
-            ReflectUtil.set(loader, "functions", qwq)
+            la.functions = qwq
         }
     }
 
     private fun deleteFunction(server: MinecraftServer, loader:FunctionLoader, path: List<Pair<Path, Path>>){
-        @Suppress("UNCHECKED_CAST") val functions = ReflectUtil.get(loader, "functions").data as Map<Identifier, CommandFunction<ServerCommandSource>>
+        val la = loader as FunctionLoaderAccessors
+        val functions = la.functions
         CompletableFuture.supplyAsync {
             path.map { (functionPath, datapackPath) ->
                 getIdentifier(functionPath, datapackPath)
@@ -312,7 +311,7 @@ object WatchCommand {
                 val text = Text.literal("- $it").withColor(TextColor.parse("#B61212").getOrThrow().rgb)
                 server.playerManager.broadcast(text, false)
             }
-            ReflectUtil.set(loader, "functions", qwq)
+            la.functions = qwq
         }
     }
 

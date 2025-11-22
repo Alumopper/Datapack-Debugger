@@ -15,18 +15,6 @@ import static net.minecraft.text.Text.literal;
  */
 public class Utils {
 
-    /**
-     * Retrieves the identifier from an ExpandedMacro function.
-     * This method uses EncapsulationBreaker to access the private field
-     * that contains the function's identifier.
-     *
-     * @param function The ExpandedMacro function to get the ID from
-     * @return The Identifier of the function, or a fallback identifier if not found
-     */
-    public static Identifier getId(ExpandedMacro<?> function) {
-        return ReflectUtil.getT(function, "functionIdentifier", Identifier.class).getDataOrElse(Identifier.of("foo:bar"));
-    }
-
     private static final String MESSAGE_PREFIX = "[Sniffer] ";
 
     public static Text addSnifferPrefix(Text text) {

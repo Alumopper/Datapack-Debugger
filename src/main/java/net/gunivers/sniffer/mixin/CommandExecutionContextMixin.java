@@ -418,7 +418,7 @@ abstract public class CommandExecutionContextMixin<T> {
             return Optional.empty();
         }
 
-        int index = ReflectUtil.getT(steppedAction, "nextActionIndex", int.class).getData();
+        int index = ((SteppedCommandActionAccessors) steppedAction).getNextActionIndex();
         if(index < 0) {
             return Optional.empty();
         }

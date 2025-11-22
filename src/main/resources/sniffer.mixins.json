@@ -5,6 +5,7 @@
   "mixins": [
     "CommandExecutionContextMixin",
     "CommandFunctionActionMixin",
+    "CommandFunctionManagerAccessors",
     "CommandFunctionManagerMixin",
     "CommandFunctionMixin",
     "DirectoryResourcePackMixin",
@@ -13,9 +14,11 @@
     "FixCommandActionMixin",
     "FrameMixin",
     "FunctionBuilderMixin",
+    "FunctionLoaderAccessors",
     "MacroMixin",
     "SingleCommandActionMixin",
     "SingleCommandActionSourcedMixin",
+    "SteppedCommandActionAccessors",
     "VariableLineMixin",
     "ZipResourcePackMixin"
   ],
