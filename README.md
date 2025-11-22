@@ -66,26 +66,22 @@ The following options are available:
 }
 ```
 
-3. Start Minecraft with the Sniffer mod installed
-4. In VSCode, press F5 or click the "Run and Debug" button
-5. Select "Connect to Minecraft" from the dropdown menu
+In this case, after the game executes `say 2`, the game will be "frozen" because it meets the breakpoint. 
 
-You can now place breakpoints in your `.mcfunction` files and execute it from the game to step through the code.
+When the game is "frozen", you can still move around, do whatever you want, just like execute the command `tick freeze`.
+So you can check the game state, or do some debugging.
 
-## Usage in Minecraft
+* Step
 
 ### Breakpoint
 
 The debugger can be controlled directly from Minecraft using the following commands:
 
-- `/breakpoint continue`: Resume execution after hitting a breakpoint
-- `/breakpoint step`: Execute the next command and pause
-- `/breakpoint step_over`: Skip to the next command in the current function
-- `/breakpoint step_out`: Continue execution until the current function returns
+* Continue
 
-All commands require operator permissions (level 2) to use.
+When the game is "frozen", you can use the command `/breakpoint move` to unfreeze the game and continue running.
 
-When execution is paused at a breakpoint, the gametick will be freezed.
+* Get Macro Arguments
 
 ### Debug Command
 
@@ -194,39 +190,43 @@ Command Syntax:
 - `watch reload`: Trigger the hot loading to apply changes.
 - `watch auto [true|false]`: Set whether auto reloading is enabled. Auto reloading will apply any change once the watcher detects it. Default is `false`. If value is not provided, it will tell you if the auto reloading is enabled.
 
-## Development
-
-### Project Structure
-
-- `src/main`: Main mod code for Minecraft
-- `src/client`: Client-side mod code
-- `vscode`: VSCode extension source code
-
-### Building the Project
-
-To build the Minecraft mod:
-
-```bash
-./gradlew build
+say start
+#breakpoint
+$say $(msg)
+say end
 ```
 
-To build the VSCode extension:
+After executing `function test:test_macro {"msg":"test"}`, we passed the value `test` to the macro argument `msg` and 
+then the game will pause before `$say $(msg)`. At this time, you can use `/breakpoint get msg` to get the value `test`.
 
-```bash
-cd vscode
-npm install
-npm run build
+* Get Function Stack
+
+By using `/breakpoint stack`, you can get the function stack of the current game. For example, if we have following two
+functions:
+
+```mcfunction
+#test:test1
+
+say 1
+function test:test2
+say 2
+
+#test: test2
+say A
+#breakpoint
+say B
 ```
 
-## License
+When the game pauses at the breakpoint, you can use `/breakpoint stack` and the function stack will be printed in the
+chat screen:
 
-This project is licensed under the MPL-2.0 License - see the [LICENSE](LICENSE) file for details.
+```
+test:test2
+test:test
 
-## Contributing
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Acknowledgements
+* Run command in current context
 
 - [Fabric](https://fabricmc.net/) - Mod loader for Minecraft
 - [VSCode Debug Adapter](https://code.visualstudio.com/api/extension-guides/debugger-extension) - VSCode debugging API
