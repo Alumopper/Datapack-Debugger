@@ -162,7 +162,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
     public void visitCompound(NbtCompound compound) {
         var children = new LinkedList<DebuggerVariable>();
         var compoundIndex = this.index++;
-        var compoundVar = new DebuggerVariable(compoundIndex, this.currentName, compound.asString().orElse(null), children, isRoot);
+        var compoundVar = new DebuggerVariable(compoundIndex, this.currentName, compound.toString(), children, isRoot);
         isRoot = false;
         variables.put(compoundIndex, compoundVar);
         for(var key: compound.getKeys()) {
@@ -191,7 +191,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
         var arrayIndex = index++;
         var array = new LinkedList<DebuggerVariable>();
         var name = currentName;
-        var result = new DebuggerVariable(arrayIndex, name, list.asString().orElse(null), array, false);
+        var result = new DebuggerVariable(arrayIndex, name, list.toString(), array, false);
         variables.put(arrayIndex, result);
         for(int i = 0; i < list.size(); i++) {
             currentName = Integer.toString(index);
@@ -211,7 +211,7 @@ public class NbtElementVariableVisitor implements NbtElementVisitor {
      */
     private void convertPrimitive(NbtElement element) {
         var i = index++;
-        returnVariable = new DebuggerVariable(i, currentName, element.asString().orElse(null), List.of(), isRoot);
+        returnVariable = new DebuggerVariable(i, currentName, element.toString(), List.of(), isRoot);
         variables.put(i, returnVariable);
     }
 }

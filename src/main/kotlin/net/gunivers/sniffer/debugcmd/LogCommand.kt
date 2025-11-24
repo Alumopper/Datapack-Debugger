@@ -19,7 +19,7 @@ object LogCommand {
                             //build output text
                             val text = Text.empty()
                             for (l in log.logs){
-                                val data = l.get(it)
+                                val data = l.get(it.source)
                                 text.append(DebugData.toText(data))
                             }
                             it.source.server.playerManager.broadcast(text, false)

@@ -100,6 +100,7 @@ public interface CommandFunctionMixin {
             }else if(stringReader.canRead() && Extension.test(stringReader, "#!")){
                 stringReader.skip();
                 stringReader.skip();
+                stringReader.skipWhitespace();
                 try {
                     SourcedCommandAction<T> action = parse(dispatcher, source, stringReader);
                     ReflectUtil.invoke(action, "setSourceFunction", id.toString())

@@ -1,8 +1,15 @@
 package net.gunivers.sniffer.dap;
 
+import com.mojang.brigadier.StringReader;
+import net.gunivers.sniffer.DatapackDebugger;
+import net.gunivers.sniffer.debugcmd.DebugData;
+import net.gunivers.sniffer.debugcmd.ExprArgumentType;
+import net.gunivers.sniffer.util.Result;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.damage.DamageTracker;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.AbstractServerCommandSource;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.util.Pair;
@@ -24,7 +31,7 @@ import java.util.Map;
  *
  * @author theogiraudet
  */
-public class VariableManager {
+public abstract class VariableManager {
 
     /**
      * Converts a command source into a map of debugger variables.
@@ -206,6 +213,15 @@ public class VariableManager {
             return visitor.get();
         }
         return Map.of();
+    }
+
+    public static Result<DebugData> evaluate(String expression){
+        expression = expression.trim();
+        try {
+            return Result.success(new ExprArgumentType().parseArgumentWithoutBrackets(new StringReader(expression)));
+        }catch (Exception ex){
+            return Result.failure("Expression is invalid: " + ex.getMessage());
+        }
     }
 
 }

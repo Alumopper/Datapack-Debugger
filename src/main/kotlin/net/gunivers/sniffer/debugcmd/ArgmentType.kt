@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.ArgumentType
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType
 import com.mojang.brigadier.exceptions.Dynamic3CommandExceptionType
+import com.mojang.brigadier.exceptions.DynamicCommandExceptionType
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import net.gunivers.sniffer.util.Extension.expect
 import net.gunivers.sniffer.util.Extension.readUntil
@@ -118,19 +119,29 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
         return Experiment(first!!, ops.map { (op, arg) -> op to arg!! }, reader.string.substring(startIndex, endIndex))
     }
 
-    fun parseArgument(reader: StringReader): DebugData {
-        return if(reader.test().expect('(').skipWhitespace().expect("data").result()){
+    fun parseArgumentWithoutBrackets(reader: StringReader): DebugData{
+        val qwq = if(reader.test("data")){
             //is data
             DataArgumentType().parse(reader)
-        }else if(reader.test().expect('(').skipWhitespace().expect("score").result()){
+        }else if(reader.test("score")){
             //is score
             ScoreArgumentType().parse(reader)
-        }else if(reader.test().expect('(').skipWhitespace().expect("name").result()){
+        }else if(reader.test("name")){
             //is a name
             EntityNameType().parse(reader)
         }else {
             PlainData("")
         }
+        return qwq
+    }
+
+    fun parseArgument(reader: StringReader): DebugData {
+        reader.expect('(')
+        reader.skipWhitespace()
+        val qwq = parseArgumentWithoutBrackets(reader)
+        reader.skipWhitespace()
+        reader.expect(')')
+        return qwq
     }
 
     companion object {
@@ -144,10 +155,10 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
         }
 
         class Experiment(val first: DebugData?, val ops: List<Pair<String, DebugData>>, val content: String): DebugData {
-            override fun get(ctx: CommandContext<ServerCommandSource>): Any {
-                var qwq = first?.get(ctx)
+            override fun get(source: ServerCommandSource): Any {
+                var qwq = first?.get(source)
                 for ((op, arg) in ops){
-                    val argValue = arg.get(ctx)
+                    val argValue = arg.get(source)
                     if(op == "||" && qwq is NbtByte && qwq.value == 1.toByte()) continue
                     if(op == "&&" && qwq is NbtByte && qwq.value == 0.toByte()) continue
                     qwq = supportedOps[op]!!.apply(qwq, argValue)
@@ -354,7 +365,7 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
 }
 
 interface DebugData {
-    fun get(ctx: CommandContext<ServerCommandSource>): Any
+    fun get(source: ServerCommandSource): Any
 
     companion object {
         fun toText(any: Any): Text{
@@ -368,26 +379,24 @@ interface DebugData {
 }
 
 class PlainData(private val value: Any): DebugData {
-    override fun get(ctx: CommandContext<ServerCommandSource>): Any {
+    override fun get(source: ServerCommandSource): Any {
         return value
     }
 }
 
 class EntityNameType: ArgumentType<EntityNameType.Companion.Name>{
     override fun parse(reader: StringReader): Name {
-        reader.expect('(')
         reader.skipWhitespace()
         reader.expect("name")
         reader.skipWhitespace()
         val name = MessageArgumentType.message().parse(reader)
-        reader.expect(')')
         return Name(name)
     }
 
     companion object {
         class Name(val msg: MessageArgumentType.MessageFormat): DebugData {
-            override fun get(ctx: CommandContext<ServerCommandSource>): Text {
-                return msg.format(ctx.source, true)
+            override fun get(source: ServerCommandSource): Any {
+                return msg.format(source, true)
             }
 
         }
@@ -397,7 +406,6 @@ class EntityNameType: ArgumentType<EntityNameType.Companion.Name>{
 class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
 
     override fun parse(reader: StringReader): Data {
-        reader.expect('(')
         reader.skipWhitespace()
         reader.expect("data")
         reader.skipWhitespace()
@@ -426,7 +434,6 @@ class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
             else -> throw INVALID_OBJECT_ERROR.createWithContext(reader)
         }
         reader.skipWhitespace()
-        reader.expect(')')
         return Data(qwq)
     }
 
@@ -435,40 +442,40 @@ class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
         private val INVALID_OBJECT_ERROR = SimpleCommandExceptionType { "Invalid object type for data argument" }
         val INVALID_BLOCK_EXCEPTION = SimpleCommandExceptionType(Text.translatable("commands.data.block.invalid"))
 
-        class Data(val source: DataSource): DebugData {
-            override fun get(ctx: CommandContext<ServerCommandSource>): NbtElement {
-                return source.getNbtElement(ctx)
+        class Data(val data: DataSource): DebugData {
+            override fun get(source: ServerCommandSource): Any {
+                return data.getNbtElement(source)
             }
         }
 
         interface DataSource {
-                fun getNbtElement(ctx: CommandContext<ServerCommandSource>): NbtElement
+                fun getNbtElement(source: ServerCommandSource): NbtElement
         }
 
         private class EntityDataSource(val selector: EntitySelector, val path: NbtPath) : DataSource {
-            override fun getNbtElement(ctx: CommandContext<ServerCommandSource>): NbtElement {
-                return DataCommand.getNbt(path, EntityDataObject(selector.getEntity(ctx.source)))
+            override fun getNbtElement(source: ServerCommandSource): NbtElement {
+                return DataCommand.getNbt(path, EntityDataObject(selector.getEntity(source)))
             }
         }
 
         private class BlockDataSource(val pos: PosArgument, val path: NbtPath): DataSource {
             @Suppress("DEPRECATION")
-            override fun getNbtElement(ctx: CommandContext<ServerCommandSource>): NbtElement {
-                val blockPos = pos.toAbsoluteBlockPos(ctx.source)
-                val world = ctx.source.world
+            override fun getNbtElement(source: ServerCommandSource): NbtElement {
+                val blockPos = pos.toAbsoluteBlockPos(source)
+                val world = source.world
                 if (!world.isChunkLoaded(blockPos)) {
                     throw BlockPosArgumentType.UNLOADED_EXCEPTION.create()
                 } else if (!world.isInBuildLimit(blockPos)) {
                     throw BlockPosArgumentType.OUT_OF_WORLD_EXCEPTION.create()
                 }
-                val blockEntity = ctx.source.world.getBlockEntity(blockPos) ?: throw INVALID_BLOCK_EXCEPTION.create()
+                val blockEntity = source.world.getBlockEntity(blockPos) ?: throw INVALID_BLOCK_EXCEPTION.create()
                 return DataCommand.getNbt(path, BlockDataObject(blockEntity, blockPos))
             }
         }
 
         private class StorageDataSource(val id: Identifier, val path: NbtPath): DataSource {
-            override fun getNbtElement(ctx: CommandContext<ServerCommandSource>): NbtElement {
-                return DataCommand.getNbt(path, ReflectUtil.newInstance(StorageDataObject::class.java, ctx.source.server.dataCommandStorage, id).data)
+            override fun getNbtElement(source: ServerCommandSource): NbtElement {
+                return DataCommand.getNbt(path, ReflectUtil.newInstance(StorageDataObject::class.java, source.server.dataCommandStorage, id).data)
             }
         }
     }
@@ -482,7 +489,6 @@ class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
     private val ERROR = SimpleCommandExceptionType { "Invalid score argument" }
 
     override fun parse(reader: StringReader): Score {
-        reader.expect('(')
         skipWhitespace(reader)
         val keyword = reader.readUnquotedString()
         //check keyword
@@ -494,7 +500,6 @@ class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
         val scoreHolder = ScoreHolderArgumentType.scoreHolder().parse(reader)
         skipWhitespace(reader)
         val objective = ScoreboardObjectiveArgumentType.scoreboardObjective().parse(reader)
-        reader.expect(')')
         return Score(scoreHolder, objective)
     }
 
@@ -503,14 +508,19 @@ class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
             val scoreHolder: ScoreHolders,
             val objective: String
         ): DebugData {
-            override fun get(ctx: CommandContext<ServerCommandSource>): NbtInt {
-                val scoreboard = ctx.source.server.scoreboard
-                val holder = scoreHolder.getNames(ctx.source) { ArrayList() }.last()
-                val obj = ScoreboardObjectiveArgumentType.getObjective(ctx, objective)
-                val readableScoreboardScore = scoreboard.getScore(holder, obj)
+            override fun get(source: ServerCommandSource): Any {
+                val scoreboard = source.server.scoreboard
+                val holder = scoreHolder.getNames(source) { ArrayList() }.last()
+                val scoreboardObjective = scoreboard.getNullableObjective(objective)
+                if (scoreboardObjective == null) {
+                    throw DynamicCommandExceptionType {
+                        Text.stringifiedTranslatable("arguments.objective.notFound", *arrayOf(it))
+                    }.create(objective)
+                }
+                val readableScoreboardScore = scoreboard.getScore(holder, scoreboardObjective)
                 if (readableScoreboardScore == null) {
                     throw PLAYERS_GET_NULL_EXCEPTION.create(
-                        obj.name,
+                        scoreboardObjective.name,
                         holder.styledDisplayName
                     )
                 } else {

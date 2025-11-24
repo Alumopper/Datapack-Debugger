@@ -63,6 +63,8 @@ public class DebuggerState {
     /** Flag indicating whether the debugger has been shut down */
     private boolean isShutdown = false;
 
+    public static ServerCommandSource currSource = null;
+
     /**
      * Private constructor to enforce singleton pattern.
      */
@@ -312,6 +314,8 @@ public class DebuggerState {
             
             // Set debugging flag
             isDebugging = true;
+
+            currSource = source;
 
             LOGGER.debug("Breakpoint triggered at {}:{}", this.scopeManager.getCurrentScope().get().getFunction(), this.scopeManager.getCurrentScope().get().getLine());
         } catch (Exception e) {

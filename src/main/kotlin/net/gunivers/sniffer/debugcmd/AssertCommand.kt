@@ -30,7 +30,7 @@ object AssertCommand {
                         .executes {
                             try{
                                 val expr = ExprArgumentType.getExpr(it, "expr")
-                                val result = expr.get(it)
+                                val result = expr.get(it.source)
                                 //check result
                                 if(result !is NbtByte){
                                     val text = Text.translatable("sniffer.commands.assert.failed.not_a_byte").styled { style -> style.withColor(Colors.RED) }

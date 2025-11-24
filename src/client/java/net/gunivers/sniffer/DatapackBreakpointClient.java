@@ -3,8 +3,14 @@ package net.gunivers.sniffer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.HoverEvent;
+import net.minecraft.text.Text;
+import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 import net.gunivers.sniffer.command.BreakPointCommand;;
@@ -31,6 +37,22 @@ public class DatapackBreakpointClient implements ClientModInitializer {
 				if(BreakPointCommand.debugMode) {
 					BreakPointCommand.step(1, client.player.getCommandSource(client.getServer().getWorld(client.player.getEntityWorld().getRegistryKey())));
 				}
+			}
+		});
+
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+			if(MinecraftClient.getInstance().isIntegratedServerRunning() && DatapackDebugger.getWebSocketServer() != null){
+				var port = DatapackDebugger.getWebSocketServer().getPort();
+				client.player.sendMessage(
+						Text.literal("DAP Server is running on port: ")
+								.append(Text.literal("[" + port + "]").styled(style ->
+												style.withColor(Colors.GREEN)
+														.withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to copy")))
+														.withClickEvent(new ClickEvent.CopyToClipboard(String.valueOf(port)))
+										)
+								),
+						false
+				);
 			}
 		});
 	}

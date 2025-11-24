@@ -1,6 +1,8 @@
 package net.gunivers.sniffer.dap;
 
 import net.gunivers.sniffer.command.StepType;
+import net.gunivers.sniffer.debugcmd.DebugData;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.util.Identifier;
 import org.eclipse.lsp4j.debug.*;
@@ -14,6 +16,8 @@ import net.gunivers.sniffer.command.FunctionTextLoader;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.gunivers.sniffer.util.Utils.addSnifferPrefix;
 import static net.gunivers.sniffer.command.BreakPointCommand.continueExec;
@@ -438,10 +442,21 @@ public class DapServer implements IDebugProtocolServer {
     public CompletableFuture<VariablesResponse> variables(VariablesArguments args) {
         LOGGER.debug("Variables request received with arguments: {}", args);
 
-        var dapVariables = new LinkedList<Variable>();
-        var variableOpt = scopeManager.getVariables(args.getVariablesReference());
-        if(variableOpt.isPresent()) {
-            var variables = variableOpt.get();
+        return CompletableFuture.supplyAsync(() -> {
+
+            var dapVariables = new LinkedList<Variable>();
+            List<DebuggerVariable> variables;
+
+            //get debugger variable
+            if(args.getVariablesReference() >= 1000000000){
+                //from expression
+                variables = debugVars.get(args.getVariablesReference()).children();
+            }else{
+                //from scope
+                var variableOpt = scopeManager.getVariables(args.getVariablesReference());
+                variables = variableOpt.orElseGet(ArrayList::new);
+            }
+
             var start = args.getStart() == null ? 0 : args.getStart();
             var count = args.getCount() == null ? variables.size() : args.getCount();
             var min = start >= 0 && start < variables.size() ? start : 0;
@@ -459,12 +474,70 @@ public class DapServer implements IDebugProtocolServer {
                 var.setPresentationHint(display);
                 dapVariables.add(var);
             }
-        }
 
-        var response = new VariablesResponse();
-        response.setVariables(dapVariables.stream().sorted(Comparator.comparingInt(Variable::getVariablesReference)).toArray(Variable[]::new));
-        LOGGER.debug("Sending Variables response: {}", response);
-        return CompletableFuture.completedFuture(response);
+            var response = new VariablesResponse();
+            response.setVariables(dapVariables.stream().sorted(Comparator.comparingInt(Variable::getVariablesReference)).toArray(Variable[]::new));
+            LOGGER.debug("Sending Variables response: {}", response);
+            return response;
+        });
+    }
+
+    private final ConcurrentHashMap<Integer, DebuggerVariable> debugVars = new ConcurrentHashMap<>();
+    private final AtomicInteger nextVarRef = new AtomicInteger(1000000000);
+
+    private final ConcurrentHashMap<String, List<Integer>> debugVarRefs = new ConcurrentHashMap<>();
+
+    @Override
+    public CompletableFuture<EvaluateResponse> evaluate(EvaluateArguments args) {
+        return CompletableFuture.supplyAsync(() -> {
+            //remove duplicate variables
+            if(debugVarRefs.containsKey(args.getExpression())){
+                for(var ref : debugVarRefs.get(args.getExpression())){
+                    debugVars.remove(ref);
+                }
+                debugVarRefs.remove(args.getExpression());
+            }
+            var result = VariableManager.evaluate(args.getExpression());
+            var response = new EvaluateResponse();
+            if(result.isFailure()){
+                response.setResult(result.getError());
+                response.setVariablesReference(0);
+                return response;
+            }
+            DebugData data = result.getData();
+            var scope = ScopeManager.get().getCurrentScope();
+            if(scope.isEmpty()){
+                response.setResult("Scope is null");
+                response.setVariablesReference(0);
+                return response;
+            }
+            var source = scope.get().getExecutor();
+            if(source instanceof ServerCommandSource serverSource){
+                try{
+                    Object value = data.get(serverSource);
+                    if(value instanceof NbtCompound compound){
+                        var ref = nextVarRef.get();
+                        var var = VariableManager.convertNbtCompound("debug", compound, ref, true);
+                        debugVars.putAll(var);
+                        nextVarRef.getAndAdd(var.size());
+                        debugVarRefs.put(args.getExpression(), new ArrayList<>(var.values().stream().map(DebuggerVariable::id).toList()));
+                        response.setResult(value.toString());
+                        response.setVariablesReference(ref);
+                    }else {
+                        response.setResult(value.toString());
+                        response.setVariablesReference(0);
+                    }
+                    return response;
+                }catch (Exception e){
+                    response.setResult(e.getMessage());
+                    response.setVariablesReference(0);
+                    return response;
+                }
+            }
+            response.setResult("Source is not a server command source");
+            response.setVariablesReference(0);
+            return response;
+        });
     }
 
     // ===== Event Handlers =====

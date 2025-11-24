@@ -222,6 +222,7 @@ public class BreakPointCommand {
      * @param steps Number of steps to execute
      * @param source The command source that triggered the step
      */
+    @SuppressWarnings("DataFlowIssue")
     public static void step(int steps, ServerCommandSource source) {
         if (!isDebugging) {
             source.sendError(Text.translatable("sniffer.commands.breakpoint.step.fail"));

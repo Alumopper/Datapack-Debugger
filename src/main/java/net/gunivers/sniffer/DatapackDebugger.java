@@ -16,6 +16,11 @@ import net.gunivers.sniffer.watcher.WatcherManager;
 import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.HoverEvent;
+import net.minecraft.text.Text;
+import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
 import org.glassfish.tyrus.server.Server;
 import org.slf4j.Logger;
@@ -41,6 +46,10 @@ public class DatapackDebugger implements ModInitializer {
 	 * This server allows IDE integration by implementing DAP over WebSockets.
 	 */
 	private static Server webSocketServer;
+
+	public static Server getWebSocketServer() {
+		return webSocketServer;
+	}
 
 	/**
 	 * Mod initialization method called on startup.
@@ -130,11 +139,6 @@ public class DatapackDebugger implements ModInitializer {
 		AssertCommand.onInitialize();
 		JvmtimerCommand.onInitialize();
 		WatchCommand.onInitialize();
-
-		//Directory watcher
-		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
-			WatcherManager.stopAll();
-		});
 	}
 
 	/**

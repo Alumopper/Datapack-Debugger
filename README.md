@@ -87,7 +87,7 @@ All commands require operator permissions (level 2) to use.
 
 When execution is paused at a breakpoint, the gametick will be freezed.
 
-### Debug Command
+### Debug Command Line
 
 Comment started with `#!` are recognized as debug commands. They will be executed as same as the normal commands in the game but without Sniffer, those debug commands will only be considered as comments.
 
