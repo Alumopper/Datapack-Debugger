@@ -1,12 +1,8 @@
 package net.gunivers.sniffer;
 
-import net.gunivers.sniffer.util.ReflectUtil;
-import net.minecraft.server.function.ExpandedMacro;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 
-import static net.minecraft.text.Text.literal;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 
 /**
  * Utility class providing helper methods for the Datapack Debugger.
@@ -17,13 +13,13 @@ public class Utils {
 
     private static final String MESSAGE_PREFIX = "[Sniffer] ";
 
-    public static Text addSnifferPrefix(Text text) {
-        var header = Text.literal(MESSAGE_PREFIX).formatted(Formatting.AQUA);
+    public static Component addSnifferPrefix(Component text) {
+        var header = Component.literal(MESSAGE_PREFIX).withStyle(ChatFormatting.AQUA);
         return header.append(text);
     }
 
-    public static Text addSnifferPrefix(String text) {
-        return addSnifferPrefix(Text.literal(text).formatted(Formatting.WHITE));
+    public static Component addSnifferPrefix(String text) {
+        return addSnifferPrefix(Component.literal(text).withStyle(ChatFormatting.WHITE));
     }
 
 }

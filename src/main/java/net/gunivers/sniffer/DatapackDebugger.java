@@ -4,7 +4,6 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.ArgumentTypeRegistry;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
-import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.gunivers.sniffer.command.BreakPointCommand;
 import net.gunivers.sniffer.command.FunctionPathGetter;
 import net.gunivers.sniffer.config.DebuggerConfig;
@@ -12,19 +11,12 @@ import net.gunivers.sniffer.dap.DebuggerState;
 import net.gunivers.sniffer.dap.ScopeManager;
 import net.gunivers.sniffer.dap.WebSocketServer;
 import net.gunivers.sniffer.debugcmd.*;
-import net.gunivers.sniffer.watcher.WatcherManager;
-import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.PackType;
 import org.glassfish.tyrus.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.minecraft.commands.synchronization.SingletonArgumentInfo;
 
 import java.io.InputStream;
 import java.util.logging.LogManager;
@@ -116,19 +108,20 @@ public class DatapackDebugger implements ModInitializer {
 				logger.error("Error stopping WebSocket server", e);
 			}
 		});
-		
-		ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new FunctionPathGetter());
+
+		//noinspection deprecation
+		ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(new FunctionPathGetter());
 
 		// Register custom argument types
 		ArgumentTypeRegistry.registerArgumentType(
-				Identifier.of("sniffer", "log"),
+				ResourceLocation.tryBuild("sniffer", "log"),
 				LogArgumentType.class,
-				ConstantArgumentSerializer.of(LogArgumentType::log)
+				SingletonArgumentInfo.contextFree(LogArgumentType::log)
 		);
 		ArgumentTypeRegistry.registerArgumentType(
-				Identifier.of("sniffer", "expr"),
+				ResourceLocation.tryBuild("sniffer", "expr"),
 				ExprArgumentType.class,
-				ConstantArgumentSerializer.of(ExprArgumentType::expr)
+				SingletonArgumentInfo.contextFree(ExprArgumentType::expr)
 		);
 
 		// Initialize breakpoint command system

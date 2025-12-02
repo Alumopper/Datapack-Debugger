@@ -4,12 +4,12 @@ import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.suggestion.SuggestionProvider
 import com.mojang.brigadier.suggestion.Suggestions
 import com.mojang.brigadier.suggestion.SuggestionsBuilder
-import net.minecraft.server.command.ServerCommandSource
+import net.minecraft.commands.CommandSourceStack
 import java.util.concurrent.CompletableFuture
 
-object JvmtimerSuggestionProvider: SuggestionProvider<ServerCommandSource> {
+object JvmtimerSuggestionProvider: SuggestionProvider<CommandSourceStack> {
     override fun getSuggestions(
-        context: CommandContext<ServerCommandSource>,
+        context: CommandContext<CommandSourceStack>,
         builder: SuggestionsBuilder
     ): CompletableFuture<Suggestions> {
         JvmtimerCommand.timers.keys.forEach {

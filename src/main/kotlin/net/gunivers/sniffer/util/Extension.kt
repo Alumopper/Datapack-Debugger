@@ -2,21 +2,21 @@ package net.gunivers.sniffer.util
 
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.exceptions.CommandSyntaxException
-import net.minecraft.text.MutableText
-import net.minecraft.text.Text
+import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.MutableComponent
 
 object Extension {
 
     @JvmStatic
-    fun MutableText.appendLine(str: String): MutableText =
+    fun MutableComponent.appendLine(str: String): MutableComponent =
         this.append(str).append("\n")
 
     @JvmStatic
-    fun MutableText.appendLine(text: Text): MutableText =
+    fun MutableComponent.appendLine(text: Component): MutableComponent =
         this.append(text).append("\n")
 
     @JvmStatic
-    fun MutableText.appendLine(): MutableText =
+    fun MutableComponent.appendLine(): MutableComponent =
         this.append("\n")
 
     class StringReaderTester(val reader: StringReader, val cursor: Int = reader.cursor) {

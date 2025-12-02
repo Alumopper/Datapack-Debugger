@@ -13,19 +13,19 @@ import net.gunivers.sniffer.util.Extension.readUntil
 import net.gunivers.sniffer.util.Extension.readWord
 import net.gunivers.sniffer.util.Extension.test
 import net.gunivers.sniffer.util.ReflectUtil
-import net.minecraft.command.BlockDataObject
-import net.minecraft.command.EntityDataObject
-import net.minecraft.command.EntitySelector
-import net.minecraft.command.StorageDataObject
-import net.minecraft.command.argument.*
-import net.minecraft.command.argument.NbtPathArgumentType.NbtPath
-import net.minecraft.command.argument.NbtPathArgumentType.nbtPath
-import net.minecraft.command.argument.ScoreHolderArgumentType.ScoreHolders
+import net.minecraft.commands.CommandSourceStack
+import net.minecraft.commands.arguments.*
+import net.minecraft.commands.arguments.NbtPathArgument.nbtPath
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument
+import net.minecraft.commands.arguments.coordinates.Coordinates
+import net.minecraft.commands.arguments.selector.EntitySelector
 import net.minecraft.nbt.*
-import net.minecraft.server.command.DataCommand
-import net.minecraft.server.command.ServerCommandSource
-import net.minecraft.text.Text
-import net.minecraft.util.Identifier
+import net.minecraft.network.chat.Component
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.commands.data.BlockDataAccessor
+import net.minecraft.server.commands.data.DataCommands
+import net.minecraft.server.commands.data.EntityDataAccessor
+import net.minecraft.server.commands.data.StorageDataAccessor
 
 class LogArgumentType: ArgumentType<LogArgumentType.Companion.Log> {
     @Suppress("unused", "PrivatePropertyName")
@@ -95,7 +95,7 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
                     op = reader.readWord()
                 }else{
                     //is a value
-                    val arg = PlainData(NbtElementArgumentType.nbtElement().parse(reader))
+                    val arg = PlainData(NbtTagArgument.nbtTag().parse(reader))
                     if(first == null && ops.isEmpty()){
                         first = arg
                     }else{
@@ -155,12 +155,12 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
         }
 
         class Experiment(val first: DebugData?, val ops: List<Pair<String, DebugData>>, val content: String): DebugData {
-            override fun get(source: ServerCommandSource): Any {
+            override fun get(source: CommandSourceStack): Any {
                 var qwq = first?.get(source)
                 for ((op, arg) in ops){
                     val argValue = arg.get(source)
-                    if(op == "||" && qwq is NbtByte && qwq.value == 1.toByte()) continue
-                    if(op == "&&" && qwq is NbtByte && qwq.value == 0.toByte()) continue
+                    if(op == "||" && qwq is ByteTag && qwq.value == 1.toByte()) continue
+                    if(op == "&&" && qwq is ByteTag && qwq.value == 0.toByte()) continue
                     qwq = supportedOps[op]!!.apply(qwq, argValue)
                 }
                 return qwq!!
@@ -170,28 +170,28 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
         private val supportedOps = mapOf(
             "+" to object: Operation("+"){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left is AbstractNbtNumber && right is AbstractNbtNumber){
-                        return if(left is NbtDouble || right is NbtDouble){
-                            NbtDouble.of(left.doubleValue() + right.doubleValue())
-                        }else if(left is NbtFloat || right is NbtFloat){
-                            NbtFloat.of(left.floatValue() + right.floatValue())
-                        }else if(left is NbtLong || right is NbtLong){
-                            NbtLong.of(left.longValue() + right.longValue())
+                    if(left is NumericTag && right is NumericTag){
+                        return if(left is DoubleTag || right is DoubleTag){
+                            DoubleTag.valueOf(left.doubleValue() + right.doubleValue())
+                        }else if(left is FloatTag || right is FloatTag){
+                            FloatTag.valueOf(left.floatValue() + right.floatValue())
+                        }else if(left is LongTag || right is LongTag){
+                            LongTag.valueOf(left.longValue() + right.longValue())
                         }else {
-                            NbtInt.of(left.intValue() + right.intValue())
+                            IntTag.valueOf(left.intValue() + right.intValue())
                         }
-                    }else if(left is Text && right is Text){
-                        return Text.empty().append(left).append(right)
-                    }else if(left is NbtCompound && right is NbtCompound){
-                        return left.copyFrom(right)
-                    }else if(left is NbtList && right is NbtList) {
+                    }else if(left is Component && right is Component){
+                        return Component.empty().append(left).append(right)
+                    }else if(left is CompoundTag && right is CompoundTag){
+                        return left.merge(right)
+                    }else if(left is ListTag && right is ListTag) {
                         return left.addAll(right)
-                    }else if(left is NbtString && right is NbtString){
-                        return NbtString.of(left.value + right.value)
-                    }else if(left is Text && right is NbtString){
-                        return NbtString.of(left.literalString + right.value)
-                    }else if(left is NbtString && right is Text){
-                        return NbtString.of(left.value + right.literalString)
+                    }else if(left is StringTag && right is StringTag){
+                        return StringTag.valueOf(left.value + right.value)
+                    }else if(left is Component && right is StringTag){
+                        return StringTag.valueOf(left.string + right.value)
+                    }else if(left is StringTag && right is Component){
+                        return StringTag.valueOf(left.value + right.string)
                     }
                     else {
                         throw OPERATION_TYPE_ERROR.create(name, left?.javaClass, right.javaClass)
@@ -200,15 +200,15 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
             },
             "-" to object: Operation("-"){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left is AbstractNbtNumber && right is AbstractNbtNumber){
-                        return if(left is NbtDouble || right is NbtDouble){
-                            NbtDouble.of(left.doubleValue() - right.doubleValue())
-                        }else if(left is NbtFloat || right is NbtFloat){
-                            NbtFloat.of(left.floatValue() - right.floatValue())
-                        }else if(left is NbtLong || right is NbtLong){
-                            NbtLong.of(left.longValue() - right.longValue())
+                    if(left is NumericTag && right is NumericTag){
+                        return if(left is DoubleTag || right is DoubleTag){
+                            DoubleTag.valueOf(left.doubleValue() - right.doubleValue())
+                        }else if(left is FloatTag || right is FloatTag){
+                            FloatTag.valueOf(left.floatValue() - right.floatValue())
+                        }else if(left is LongTag || right is LongTag){
+                            LongTag.valueOf(left.longValue() - right.longValue())
                         }else {
-                            NbtInt.of(left.intValue() - right.intValue())
+                            IntTag.valueOf(left.intValue() - right.intValue())
                         }
                     }else {
                         throw buildOperationTypeError(left, right)
@@ -217,15 +217,15 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
             },
             "*" to object: Operation("*"){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left is AbstractNbtNumber && right is AbstractNbtNumber){
-                        return if(left is NbtDouble || right is NbtDouble){
-                            NbtDouble.of(left.doubleValue() * right.doubleValue())
-                        }else if(left is NbtFloat || right is NbtFloat){
-                            NbtFloat.of(left.floatValue() * right.floatValue())
-                        }else if(left is NbtLong || right is NbtLong){
-                            NbtLong.of(left.longValue() * right.longValue())
+                    if(left is NumericTag && right is NumericTag){
+                        return if(left is DoubleTag || right is DoubleTag){
+                            DoubleTag.valueOf(left.doubleValue() * right.doubleValue())
+                        }else if(left is FloatTag || right is FloatTag){
+                            FloatTag.valueOf(left.floatValue() * right.floatValue())
+                        }else if(left is LongTag || right is LongTag){
+                            LongTag.valueOf(left.longValue() * right.longValue())
                         }else {
-                            NbtInt.of(left.intValue() * right.intValue())
+                            IntTag.valueOf(left.intValue() * right.intValue())
                         }
                     }else {
                         throw buildOperationTypeError(left, right)
@@ -234,15 +234,15 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
             },
             "/" to object: Operation("/"){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left is AbstractNbtNumber && right is AbstractNbtNumber){
-                        return if(left is NbtDouble || right is NbtDouble){
-                            NbtDouble.of(left.doubleValue() / right.doubleValue())
-                        }else if(left is NbtFloat || right is NbtFloat){
-                            NbtFloat.of(left.floatValue() / right.floatValue())
-                        }else if(left is NbtLong || right is NbtLong){
-                            NbtLong.of(left.longValue() / right.longValue())
+                    if(left is NumericTag && right is NumericTag){
+                        return if(left is DoubleTag || right is DoubleTag){
+                            DoubleTag.valueOf(left.doubleValue() / right.doubleValue())
+                        }else if(left is FloatTag || right is FloatTag){
+                            FloatTag.valueOf(left.floatValue() / right.floatValue())
+                        }else if(left is LongTag || right is LongTag){
+                            LongTag.valueOf(left.longValue() / right.longValue())
                         }else {
-                            NbtInt.of(left.intValue() / right.intValue())
+                            IntTag.valueOf(left.intValue() / right.intValue())
                         }
                     }else {
                         throw buildOperationTypeError(left, right)
@@ -251,8 +251,8 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
             },
             "<" to object: Operation("<"){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left is AbstractNbtNumber && right is AbstractNbtNumber){
-                        return NbtByte.of(left.doubleValue() < right.doubleValue())
+                    if(left is NumericTag && right is NumericTag){
+                        return ByteTag.valueOf(left.doubleValue() < right.doubleValue())
                     }else {
                         throw buildOperationTypeError(left, right)
                     }
@@ -260,8 +260,8 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
             },
             ">" to object: Operation(">"){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left is AbstractNbtNumber && right is AbstractNbtNumber){
-                        return NbtByte.of(left.doubleValue() > right.doubleValue())
+                    if(left is NumericTag && right is NumericTag){
+                        return ByteTag.valueOf(left.doubleValue() > right.doubleValue())
                     }else {
                         throw buildOperationTypeError(left, right)
                     }
@@ -269,8 +269,8 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
             },
             "<=" to object: Operation("<="){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left is AbstractNbtNumber && right is AbstractNbtNumber){
-                        return NbtByte.of(left.doubleValue() <= right.doubleValue())
+                    if(left is NumericTag && right is NumericTag){
+                        return ByteTag.valueOf(left.doubleValue() <= right.doubleValue())
                     }else {
                         throw buildOperationTypeError(left, right)
                     }
@@ -278,8 +278,8 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
             },
             ">=" to object: Operation(">="){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left is AbstractNbtNumber && right is AbstractNbtNumber){
-                        return NbtByte.of(left.doubleValue() >= right.doubleValue())
+                    if(left is NumericTag && right is NumericTag){
+                        return ByteTag.valueOf(left.doubleValue() >= right.doubleValue())
                     }else {
                         throw buildOperationTypeError(left, right)
                     }
@@ -287,60 +287,60 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
             },
             "==" to object: Operation("=="){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left is NbtElement && right is NbtElement) return NbtByte.of(left == right)
-                    if(left is Text && right is NbtString) return NbtByte.of(left.literalString == right.value)
-                    if(left is NbtString && right is Text) return NbtByte.of(left.value == right.literalString)
+                    if(left is Tag && right is Tag) return ByteTag.valueOf(left == right)
+                    if(left is Component && right is StringTag) return ByteTag.valueOf(left.string == right.value)
+                    if(left is StringTag && right is Component) return ByteTag.valueOf(left.value == right.string)
                     return false
                 }
             },
             "!=" to object: Operation("!=") {
                 override fun apply(left: Any?, right: Any): Any {
-                    if (left is NbtElement && right is NbtElement) return NbtByte.of(left != right)
-                    if (left is Text && right is NbtString) return NbtByte.of(left.literalString != right.value)
-                    if (left is NbtString && right is Text) return NbtByte.of(left.value != right.literalString)
+                    if (left is Tag && right is Tag) return ByteTag.valueOf(left != right)
+                    if (left is Component && right is StringTag) return ByteTag.valueOf(left.string != right.value)
+                    if (left is StringTag && right is Component) return ByteTag.valueOf(left.value != right.string)
                     return true
                 }
             },
             "is" to object: Operation("is") {
                 override fun apply(left: Any?, right: Any): Any {
-                    if(right !is NbtString) throw buildOperationTypeError(left, right)
+                    if(right !is StringTag) throw buildOperationTypeError(left, right)
                     val qwq = when(right.value){
-                        "nbt" -> left is NbtElement
-                        "text" -> left is Text
-                        "string" -> left is NbtString
-                        "number" -> left is AbstractNbtNumber
-                        "byte" -> left is NbtByte
-                        "short" -> left is NbtShort
-                        "int" -> left is NbtInt
-                        "long" -> left is NbtLong
-                        "float" -> left is NbtFloat
-                        "double" -> left is NbtDouble
-                        "int_array" -> left is NbtIntArray
-                        "long_array" -> left is NbtLongArray
-                        "byte_array" -> left is NbtByteArray
-                        "list" -> left is NbtList
-                        "compound" -> left is NbtCompound
+                        "nbt" -> left is Tag
+                        "text" -> left is Component
+                        "string" -> left is StringTag
+                        "number" -> left is NumericTag
+                        "byte" -> left is ByteTag
+                        "short" -> left is ShortTag
+                        "int" -> left is IntTag
+                        "long" -> left is LongTag
+                        "float" -> left is FloatTag
+                        "double" -> left is DoubleTag
+                        "int_array" -> left is IntArrayTag
+                        "long_array" -> left is LongArrayTag
+                        "byte_array" -> left is ByteArrayTag
+                        "list" -> left is ListTag
+                        "compound" -> left is CompoundTag
                         else -> false
                     }
-                    return NbtByte.of(qwq)
+                    return ByteTag.valueOf(qwq)
                 }
             },
             "!" to object: Operation("!"){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(right !is NbtByte) throw buildOperationTypeError(left, right)
-                    return NbtByte.of(!right.asBoolean().get())
+                    if(right !is ByteTag) throw buildOperationTypeError(left, right)
+                    return ByteTag.valueOf(!right.asBoolean().get())
                 }
             },
             "||" to object: Operation("||"){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left !is NbtByte || right !is NbtByte) throw buildOperationTypeError(left, right)
-                    return NbtByte.of(left.asBoolean().get() || right.asBoolean().get())
+                    if(left !is ByteTag || right !is ByteTag) throw buildOperationTypeError(left, right)
+                    return ByteTag.valueOf(left.asBoolean().get() || right.asBoolean().get())
                 }
             },
             "&&" to object: Operation("&&"){
                 override fun apply(left: Any?, right: Any): Any {
-                    if(left !is NbtByte || right !is NbtByte) throw buildOperationTypeError(left, right)
-                    return NbtByte.of(left.asBoolean().get() && right.asBoolean().get())
+                    if(left !is ByteTag || right !is ByteTag) throw buildOperationTypeError(left, right)
+                    return ByteTag.valueOf(left.asBoolean().get() && right.asBoolean().get())
                 }
             }
         )
@@ -365,21 +365,21 @@ class ExprArgumentType: ArgumentType<ExprArgumentType.Companion.Experiment> {
 }
 
 interface DebugData {
-    fun get(source: ServerCommandSource): Any
+    fun get(source: CommandSourceStack): Any
 
     companion object {
-        fun toText(any: Any): Text{
+        fun toText(any: Any): Component{
             return when(any){
-                is NbtElement -> NbtHelper.toPrettyPrintedText(any)
-                is Text -> any
-                else -> Text.literal(any.toString())
+                is Tag -> NbtUtils.toPrettyComponent(any)
+                is Component -> any
+                else -> Component.literal(any.toString())
             }
         }
     }
 }
 
 class PlainData(private val value: Any): DebugData {
-    override fun get(source: ServerCommandSource): Any {
+    override fun get(source: CommandSourceStack): Any {
         return value
     }
 }
@@ -389,14 +389,14 @@ class EntityNameType: ArgumentType<EntityNameType.Companion.Name>{
         reader.skipWhitespace()
         reader.expect("name")
         reader.skipWhitespace()
-        val name = MessageArgumentType.message().parse(reader)
+        val name = MessageArgument.message().parse(reader)
         return Name(name)
     }
 
     companion object {
-        class Name(val msg: MessageArgumentType.MessageFormat): DebugData {
-            override fun get(source: ServerCommandSource): Any {
-                return msg.format(source, true)
+        class Name(val msg: MessageArgument.Message): DebugData {
+            override fun get(source: CommandSourceStack): Any {
+                return msg.toComponent(source, true)
             }
 
         }
@@ -412,21 +412,21 @@ class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
         val qwq = when(reader.readUnquotedString()){
             "block" -> {
                 reader.skipWhitespace()
-                val pos = BlockPosArgumentType.blockPos().parse(reader)
+                val pos = BlockPosArgument.blockPos().parse(reader)
                 reader.skipWhitespace()
                 val path = nbtPath().parse(reader)
                 BlockDataSource(pos, path)
             }
             "entity" -> {
                 reader.skipWhitespace()
-                val selector = EntityArgumentType.entity().parse(reader)
+                val selector = EntityArgument.entity().parse(reader)
                 reader.skipWhitespace()
                 val path = nbtPath().parse(reader)
                 EntityDataSource(selector, path)
             }
             "storage" -> {
                 reader.skipWhitespace()
-                val id = IdentifierArgumentType.identifier().parse(reader)
+                val id = ResourceLocationArgument.id().parse(reader)
                 reader.skipWhitespace()
                 val path = nbtPath().parse(reader)
                 StorageDataSource(id, path)
@@ -440,42 +440,41 @@ class DataArgumentType: ArgumentType<DataArgumentType.Companion.Data> {
     companion object {
 
         private val INVALID_OBJECT_ERROR = SimpleCommandExceptionType { "Invalid object type for data argument" }
-        val INVALID_BLOCK_EXCEPTION = SimpleCommandExceptionType(Text.translatable("commands.data.block.invalid"))
+        val INVALID_BLOCK_EXCEPTION = SimpleCommandExceptionType(Component.translatable("commands.data.block.invalid"))
 
         class Data(val data: DataSource): DebugData {
-            override fun get(source: ServerCommandSource): Any {
+            override fun get(source: CommandSourceStack): Any {
                 return data.getNbtElement(source)
             }
         }
 
         interface DataSource {
-                fun getNbtElement(source: ServerCommandSource): NbtElement
+                fun getNbtElement(source: CommandSourceStack): Tag
         }
 
-        private class EntityDataSource(val selector: EntitySelector, val path: NbtPath) : DataSource {
-            override fun getNbtElement(source: ServerCommandSource): NbtElement {
-                return DataCommand.getNbt(path, EntityDataObject(selector.getEntity(source)))
+        private class EntityDataSource(val selector: EntitySelector, val path: NbtPathArgument.NbtPath) : DataSource {
+            override fun getNbtElement(source: CommandSourceStack): Tag {
+                return DataCommands.getSingleTag(path, EntityDataAccessor(selector.findSingleEntity(source)))
             }
         }
 
-        private class BlockDataSource(val pos: PosArgument, val path: NbtPath): DataSource {
-            @Suppress("DEPRECATION")
-            override fun getNbtElement(source: ServerCommandSource): NbtElement {
-                val blockPos = pos.toAbsoluteBlockPos(source)
-                val world = source.world
-                if (!world.isChunkLoaded(blockPos)) {
-                    throw BlockPosArgumentType.UNLOADED_EXCEPTION.create()
-                } else if (!world.isInBuildLimit(blockPos)) {
-                    throw BlockPosArgumentType.OUT_OF_WORLD_EXCEPTION.create()
+        private class BlockDataSource(val pos: Coordinates, val path: NbtPathArgument.NbtPath): DataSource {
+            override fun getNbtElement(source: CommandSourceStack): Tag {
+                val blockPos = pos.getBlockPos(source)
+                val world = source.level
+                if (!world.isLoaded(blockPos)) {
+                    throw BlockPosArgument.ERROR_NOT_LOADED.create()
+                } else if (!world.isOutsideBuildHeight(blockPos)) {
+                    throw BlockPosArgument.ERROR_OUT_OF_WORLD.create()
                 }
-                val blockEntity = source.world.getBlockEntity(blockPos) ?: throw INVALID_BLOCK_EXCEPTION.create()
-                return DataCommand.getNbt(path, BlockDataObject(blockEntity, blockPos))
+                val blockEntity = source.level.getBlockEntity(blockPos) ?: throw INVALID_BLOCK_EXCEPTION.create()
+                return DataCommands.getSingleTag(path, BlockDataAccessor(blockEntity, blockPos))
             }
         }
 
-        private class StorageDataSource(val id: Identifier, val path: NbtPath): DataSource {
-            override fun getNbtElement(source: ServerCommandSource): NbtElement {
-                return DataCommand.getNbt(path, ReflectUtil.newInstance(StorageDataObject::class.java, source.server.dataCommandStorage, id).data)
+        private class StorageDataSource(val id: ResourceLocation, val path: NbtPathArgument.NbtPath): DataSource {
+            override fun getNbtElement(source: CommandSourceStack): Tag {
+                return DataCommands.getSingleTag(path, ReflectUtil.newInstance(StorageDataAccessor::class.java, source.server.commandStorage, id).data)
             }
         }
     }
@@ -497,46 +496,44 @@ class ScoreArgumentType: ArgumentType<ScoreArgumentType.Companion.Score> {
         }
         skipWhitespace(reader)
         //read selector
-        val scoreHolder = ScoreHolderArgumentType.scoreHolder().parse(reader)
+        val scoreHolder = ScoreHolderArgument.scoreHolder().parse(reader)
         skipWhitespace(reader)
-        val objective = ScoreboardObjectiveArgumentType.scoreboardObjective().parse(reader)
+        val objective = ObjectiveArgument.objective().parse(reader)
         return Score(scoreHolder, objective)
     }
 
     companion object {
         class Score (
-            val scoreHolder: ScoreHolders,
+            val scoreHolder: ScoreHolderArgument.Result,
             val objective: String
         ): DebugData {
-            override fun get(source: ServerCommandSource): Any {
+            override fun get(source: CommandSourceStack): Any {
                 val scoreboard = source.server.scoreboard
                 val holder = scoreHolder.getNames(source) { ArrayList() }.last()
-                val scoreboardObjective = scoreboard.getNullableObjective(objective)
-                if (scoreboardObjective == null) {
-                    throw DynamicCommandExceptionType {
-                        Text.stringifiedTranslatable("arguments.objective.notFound", *arrayOf(it))
+                val scoreboardObjective = scoreboard.getObjective(objective)
+                    ?: throw DynamicCommandExceptionType {
+                        Component.translatable("arguments.objective.notFound", *arrayOf(it))
                     }.create(objective)
-                }
-                val readableScoreboardScore = scoreboard.getScore(holder, scoreboardObjective)
+                val readableScoreboardScore = scoreboard.getOrCreatePlayerScore(holder, scoreboardObjective)
                 if (readableScoreboardScore == null) {
                     throw PLAYERS_GET_NULL_EXCEPTION.create(
                         scoreboardObjective.name,
-                        holder.styledDisplayName
+                        holder.displayName
                     )
                 } else {
-                    return NbtInt.of(readableScoreboardScore.score)
+                    return IntTag.valueOf(readableScoreboardScore.get())
                 }
             }
 
         }
 
-         fun score(): ScoreArgumentType = ScoreArgumentType()
+        fun score(): ScoreArgumentType = ScoreArgumentType()
 
         private fun skipWhitespace(reader: StringReader) {
             while (reader.canRead() && Character.isWhitespace(reader.peek())) reader.skip()
         }
         private val PLAYERS_GET_NULL_EXCEPTION = Dynamic2CommandExceptionType { objective: Any?, target: Any? ->
-            Text.stringifiedTranslatable(
+            Component.translatable(
                 "commands.scoreboard.players.get.null",
                 objective,
                 target

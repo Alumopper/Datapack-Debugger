@@ -4,17 +4,15 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.logging.LogUtils
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
-import net.gunivers.sniffer.DatapackDebugger
 import net.gunivers.sniffer.command.BreakPointCommand
 import net.gunivers.sniffer.util.Extension.appendLine
-import net.minecraft.nbt.NbtByte
-import net.minecraft.nbt.NbtElement
-import net.minecraft.nbt.NbtHelper
-import net.minecraft.server.command.CommandManager.argument
-import net.minecraft.server.command.ServerCommandSource
-import net.minecraft.text.Text
-import net.minecraft.text.TextColor
-import net.minecraft.util.Colors
+import net.minecraft.commands.CommandSourceStack
+import net.minecraft.commands.Commands.argument
+import net.minecraft.nbt.ByteTag
+import net.minecraft.nbt.NbtUtils
+import net.minecraft.nbt.Tag
+import net.minecraft.network.chat.Component
+import net.minecraft.util.CommonColors
 import org.slf4j.Logger
 
 object AssertCommand {
@@ -24,46 +22,46 @@ object AssertCommand {
     fun onInitialize() {
         CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
             dispatcher.register(
-                literal<ServerCommandSource?>("assert")
-                    .requires{it.hasPermissionLevel(2)}
+                literal<CommandSourceStack?>("assert")
+                    .requires{it.hasPermission(2)}
                     .then(argument("expr", ExprArgumentType())
                         .executes {
                             try{
                                 val expr = ExprArgumentType.getExpr(it, "expr")
                                 val result = expr.get(it.source)
                                 //check result
-                                if(result !is NbtByte){
-                                    val text = Text.translatable("sniffer.commands.assert.failed.not_a_byte").styled { style -> style.withColor(Colors.RED) }
+                                if(result !is ByteTag){
+                                    val text = Component.translatable("sniffer.commands.assert.failed.not_a_byte").withStyle { style -> style.withColor(CommonColors.RED) }
                                     when (result) {
-                                        is NbtElement -> text.append(NbtHelper.toPrettyPrintedText(result))
-                                        is Text -> text.append(result)
+                                        is Tag -> text.append(NbtUtils.toPrettyComponent(result))
+                                        is Component -> text.append(result)
                                         else -> text.append(result.toString())
                                     }
                                     text.appendLine()
-                                    text.appendLine(Text.translatable("sniffer.commands.assert.failed.expression", expr.content))
-                                    text.appendLine(Text.translatable("sniffer.commands.assert.failed.stack"))
+                                    text.appendLine(Component.translatable("sniffer.commands.assert.failed.expression", expr.content))
+                                    text.appendLine(Component.translatable("sniffer.commands.assert.failed.stack"))
                                     text.append(BreakPointCommand.getErrorStack(10))
-                                    it.source.server.playerManager.broadcast(text, false)
+                                    it.source.server.playerList.broadcastSystemMessage(text, false)
                                     return@executes 0
                                 }
                                 if(result.value.toInt() == 0){
-                                    val text = Text.translatable("sniffer.commands.assert.failed.result_is_zero").styled { style -> style.withColor(Colors.RED) };
+                                    val text = Component.translatable("sniffer.commands.assert.failed.result_is_zero").withStyle { style -> style.withColor(CommonColors.RED) }
                                     text.appendLine()
-                                    text.appendLine(Text.translatable("sniffer.commands.assert.failed.expression", expr.content))
-                                    text.appendLine(Text.translatable("sniffer.commands.assert.failed.stack"))
+                                    text.appendLine(Component.translatable("sniffer.commands.assert.failed.expression", expr.content))
+                                    text.appendLine(Component.translatable("sniffer.commands.assert.failed.stack"))
                                     text.append(BreakPointCommand.getErrorStack(10))
-                                    it.source.server.playerManager.broadcast(text, false)
+                                    it.source.server.playerList.broadcastSystemMessage(text, false)
                                     return@executes 0
                                 }
-                                it.source.sendFeedback({ Text.translatable("sniffer.commands.assert.passed") }, false)
+                                it.source.sendSuccess({ Component.translatable("sniffer.commands.assert.passed") }, false)
                                 return@executes 1
                             }catch (ex: CommandSyntaxException){
                                 LOGGER.error("Exception while execution command:",ex)
-                                val text = Text.translatable("sniffer.commands.assert.failed").styled { style -> style.withColor(Colors.RED) }
-                                text.appendLine(ex.message?.let(Text::literal) ?: Text.translatable("sniffer.commands.assert.failed.unknown_error"))
-                                text.appendLine(Text.translatable("sniffer.commands.assert.failed.stack"))
+                                val text = Component.translatable("sniffer.commands.assert.failed").withStyle() { style -> style.withColor(CommonColors.RED) }
+                                text.appendLine(ex.message?.let(Component::literal) ?: Component.translatable("sniffer.commands.assert.failed.unknown_error"))
+                                text.appendLine(Component.translatable("sniffer.commands.assert.failed.stack"))
                                 text.append(BreakPointCommand.getStack(10))
-                                it.source.server.playerManager.broadcast(text, false)
+                                it.source.server.playerList.broadcastSystemMessage(text, false)
                                 return@executes 0
                             }
 

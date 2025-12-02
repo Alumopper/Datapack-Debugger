@@ -3,10 +3,8 @@ package net.gunivers.sniffer.watcher
 import io.methvin.watcher.DirectoryChangeEvent
 import io.methvin.watcher.DirectoryWatcher
 import kotlinx.io.IOException
-import net.minecraft.network.message.MessageType
+import net.minecraft.network.chat.Component
 import net.minecraft.server.MinecraftServer
-import net.minecraft.text.Text
-import net.minecraft.util.Util
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -49,8 +47,8 @@ object WatcherManager {
                 WATCHERS.remove(id)
                 FUTURES.remove(id)
                 server.execute {
-                    server.playerManager.broadcast(
-                        Text.of("[watch:$id] watcher stopped: " + throwable.message),
+                    server.playerList.broadcastSystemMessage(
+                        Component.literal("[watch:$id] watcher stopped: " + throwable.message),
                         false
                     )
                 }
@@ -60,8 +58,8 @@ object WatcherManager {
                 WATCHERS.remove(id)
                 FUTURES.remove(id)
                 server.execute {
-                    server.playerManager.broadcast(
-                        Text.of("[watch:$id] watcher stopped"),
+                    server.playerList.broadcastSystemMessage(
+                        Component.literal("[watch:$id] watcher stopped"),
                         false
                     )
                 }

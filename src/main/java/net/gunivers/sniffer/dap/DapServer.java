@@ -1,10 +1,13 @@
+// TODO(Ravel): Failed to fully resolve file: null
+// TODO(Ravel): Failed to fully resolve file: null
+// TODO(Ravel): Failed to fully resolve file: null
 package net.gunivers.sniffer.dap;
 
 import net.gunivers.sniffer.command.StepType;
 import net.gunivers.sniffer.debugcmd.DebugData;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.util.Identifier;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import org.eclipse.lsp4j.debug.*;
 import org.eclipse.lsp4j.debug.Thread;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
@@ -332,7 +335,7 @@ public class DapServer implements IDebugProtocolServer {
         LOGGER.debug("Source request received with arguments: {}", args);
 
         var response = new SourceResponse();
-        var id = Identifier.tryParse(args.getSource().getName());
+        var id = ResourceLocation.tryParse(args.getSource().getName());
         var content = String.join("\n", FunctionTextLoader.get(id));
 
         response.setContent(content);
@@ -512,10 +515,10 @@ public class DapServer implements IDebugProtocolServer {
                 return response;
             }
             var source = scope.get().getExecutor();
-            if(source instanceof ServerCommandSource serverSource){
+            if(source instanceof CommandSourceStack serverSource){
                 try{
                     Object value = data.get(serverSource);
-                    if(value instanceof NbtCompound compound){
+                    if(value instanceof CompoundTag compound){
                         var ref = nextVarRef.get();
                         var var = VariableManager.convertNbtCompound("debug", compound, ref, true);
                         debugVars.putAll(var);
@@ -660,8 +663,8 @@ public class DapServer implements IDebugProtocolServer {
      */
     private void sendMessageToAllPlayers(String message) {
         try {
-            debuggerState.getServer().getPlayerManager().getPlayerList().forEach(player -> {
-                player.sendMessage(addSnifferPrefix(message));
+            debuggerState.getServer().getPlayerList().getPlayers().forEach(player -> {
+                player.sendSystemMessage(addSnifferPrefix(message));
             });
         } catch (Exception e) {
             LOGGER.warn("Error sending message to players", e);
@@ -671,7 +674,7 @@ public class DapServer implements IDebugProtocolServer {
     /**
      * Gets the command source from the server.
      */
-    private ServerCommandSource getCommandSource() {
-        return debuggerState.getServer().getCommandSource();
+    private CommandSourceStack getCommandSource() {
+        return debuggerState.getServer().createCommandSourceStack();
     }
 }

@@ -7,20 +7,21 @@ import net.gunivers.sniffer.DatapackDebugger;
 import net.gunivers.sniffer.command.FunctionTextLoader;
 import net.gunivers.sniffer.util.Extension;
 import net.gunivers.sniffer.util.ReflectUtil;
-import net.minecraft.command.SourcedCommandAction;
-import net.minecraft.server.command.AbstractServerCommandSource;
-import net.minecraft.server.function.CommandFunction;
-import net.minecraft.server.function.FunctionBuilder;
-import net.minecraft.util.Identifier;
+import net.minecraft.commands.ExecutionCommandSource;
+import net.minecraft.commands.execution.UnboundEntryAction;
+import net.minecraft.commands.functions.CommandFunction;
+import net.minecraft.commands.functions.FunctionBuilder;
+import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.Unique;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import static net.minecraft.server.function.CommandFunction.parse;
-import static net.minecraft.server.function.CommandFunction.validateCommandLength;
+import static net.minecraft.commands.functions.CommandFunction.checkCommandLineLength;
+import static net.minecraft.commands.functions.CommandFunction.parseCommand;
 
 /**
  * @author theogiraudet
@@ -29,7 +30,7 @@ import static net.minecraft.server.function.CommandFunction.validateCommandLengt
 public interface CommandFunctionMixin {
 
     @Shadow
-    private static boolean continuesToNextLine(CharSequence string) {
+    private static boolean shouldConcatenateNextLine(CharSequence string) {
         return false;
     }
 
@@ -38,15 +39,16 @@ public interface CommandFunctionMixin {
      * @reason to save in each command the file and source line
      */
     @Overwrite
-    static <T extends AbstractServerCommandSource<T>> CommandFunction<T> create(Identifier id, CommandDispatcher<T> dispatcher, T source, List<String> lines) {
+    static <T extends ExecutionCommandSource<T>> CommandFunction<T> fromLines(ResourceLocation id, CommandDispatcher<T> dispatcher, T source, List<String> lines) {
         FunctionTextLoader.put(id, lines);
         //noinspection unchecked
         FunctionBuilder<T> functionBuilder = ReflectUtil.newInstance(FunctionBuilder.class).getData();
+        ArrayList<String> debugTags = new ArrayList<>();
         for (int i = 0; i < lines.size(); ++i) {
             int j = i + 1;
             String string = lines.get(i).trim();
             String string3;
-            if (continuesToNextLine(string)) {
+            if (shouldConcatenateNextLine(string)) {
                 StringBuilder stringBuilder = new StringBuilder(string);
 
                 do {
@@ -58,15 +60,15 @@ public interface CommandFunctionMixin {
                     stringBuilder.deleteCharAt(stringBuilder.length() - 1);
                     String string2 = lines.get(i).trim();
                     stringBuilder.append(string2);
-                    validateCommandLength(stringBuilder);
-                } while (continuesToNextLine(stringBuilder));
+                    checkCommandLineLength(stringBuilder);
+                } while (shouldConcatenateNextLine(stringBuilder));
 
                 string3 = stringBuilder.toString();
             } else {
                 string3 = string;
             }
 
-            validateCommandLength(string3);
+            checkCommandLineLength(string3);
             StringReader stringReader = new StringReader(string3);
             if (stringReader.canRead() && stringReader.peek() != '#') {
                 if (stringReader.peek() == '/') {
@@ -80,10 +82,10 @@ public interface CommandFunctionMixin {
                 }
 
                 if (stringReader.peek() == '$') {
-                    functionBuilder.addMacroCommand(string3.substring(1), j, source);
+                    functionBuilder.addMacro(string3.substring(1), j, source);
                 } else {
                     try {
-                        SourcedCommandAction<T> action = parse(dispatcher, source, stringReader);
+                        var action = parseCommand(dispatcher, source, stringReader);
                         ReflectUtil.invoke(action, "setSourceFunction", id.toString())
                                 .onFailure(msg -> {
                                     throw new IllegalArgumentException(msg);
@@ -92,7 +94,7 @@ public interface CommandFunctionMixin {
                                 .onFailure(msg -> {
                                     throw new IllegalArgumentException(msg);
                                 });
-                        functionBuilder.addAction(action);
+                        functionBuilder.addCommand(action);
                     } catch (CommandSyntaxException commandSyntaxException) {
                         throw new IllegalArgumentException("Whilst parsing command on line " + j + ": " + commandSyntaxException.getMessage());
                     }
@@ -102,7 +104,7 @@ public interface CommandFunctionMixin {
                 stringReader.skip();
                 stringReader.skipWhitespace();
                 try {
-                    SourcedCommandAction<T> action = parse(dispatcher, source, stringReader);
+                    var action = parseCommand(dispatcher, source, stringReader);
                     ReflectUtil.invoke(action, "setSourceFunction", id.toString())
                             .onFailure(msg -> {
                                 throw new IllegalArgumentException(msg);
@@ -111,14 +113,20 @@ public interface CommandFunctionMixin {
                             .onFailure(msg -> {
                                 throw new IllegalArgumentException(msg);
                             });
-                    functionBuilder.addAction(action);
+                    functionBuilder.addCommand(action);
                 } catch (CommandSyntaxException commandSyntaxException) {
                      DatapackDebugger.getLogger().warn("Whilst parsing debug command on line " + j + ": " + commandSyntaxException.getMessage());
                 }
+            }else if(stringReader.canRead() && Extension.test(stringReader, "#@")){
+                stringReader.skip();
+                stringReader.skip();
+                stringReader.skipWhitespace();
+                //读取debugTag
+                debugTags.add(stringReader.readUnquotedString());
             }
         }
-        return functionBuilder.toCommandFunction(id);
+        var qwq = functionBuilder.build(id);
+        CommandFunctionUniqueAccessors.of(qwq).setDebugTags(debugTags);
+        return qwq;
     }
-
-    
 }

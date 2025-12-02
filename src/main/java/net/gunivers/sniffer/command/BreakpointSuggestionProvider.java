@@ -5,7 +5,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.gunivers.sniffer.util.ReflectUtil;
-import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.commands.CommandSourceStack;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @author Alumopper
  */
-public class BreakpointSuggestionProvider implements SuggestionProvider<ServerCommandSource>{
+public class BreakpointSuggestionProvider implements SuggestionProvider<CommandSourceStack>{
 
     /** Singleton instance of the suggestion provider */
     public static final BreakpointSuggestionProvider INSTANCE = new BreakpointSuggestionProvider();
@@ -35,7 +35,7 @@ public class BreakpointSuggestionProvider implements SuggestionProvider<ServerCo
      */
     @SuppressWarnings("unchecked")
     @Override
-    public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> c, SuggestionsBuilder builder) {
+    public CompletableFuture<Suggestions> getSuggestions(CommandContext<CommandSourceStack> c, SuggestionsBuilder builder) {
         var context = BreakPointCommand.storedCommandExecutionContext.peekFirst();
         if(context == null){
             return builder.buildFuture();

@@ -1,7 +1,5 @@
 package net.gunivers.sniffer.util;
 
-import kotlin.jvm.Throws;
-
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
